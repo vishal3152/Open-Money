@@ -4,25 +4,28 @@
 
 # Open Money
 
-**Know exactly where your money is — to the paise.**
+**A privacy-first ledger you can keep on your own device.**
 
 [![Audited with Cloudflare security-audit-skill](https://img.shields.io/badge/security_audit-Cloudflare-F38020?style=flat&logo=cloudflare&logoColor=white)](https://github.com/cloudflare/security-audit-skill)
 
-[Hosted app](https://money-watch-me.vercel.app/) · [Desktop downloads](#desktop-or-local-browser) · [Run it yourself](#run-it-your-way)
+[Privacy](#privacy-and-data-ownership) · [Hosted app](https://money-watch-me.vercel.app/) · [Desktop downloads](#desktop-or-local-browser) · [Run it yourself](#run-it-your-way) · [Development setup](#develop)
 
 </div>
 
-Open Money is a privacy-focused personal ledger for accounts across institutions and currencies. After Microsoft discontinued Money, we wanted a successor that let us keep our financial records on our own machines. [Microsoft Money support archive](https://mskb.pkisolutions.com/kb/894020)
+Open Money is a personal ledger for accounts across institutions and currencies. In local mode, your ledger lives in a SQLite file on your own device or server. You can enter transactions and reconcile balances without connecting to a bank or AI service. We built Open Money because, after Microsoft discontinued Money, we wanted a successor we could run ourselves. [Microsoft Money support archive](https://mskb.pkisolutions.com/kb/894020)
 
 Recent bank account takeover scams show how unauthorized transfers can appear in your account. Keeping a parallel ledger gives you an independent record to compare with your bank statement and investigate entries you don't recognize. Compare the bank's reported balance with your ledger balance and keep any discrepancy open until you record an Adjustment or mark it as disputed with the bank. [FBI account takeover alert](https://www.ic3.gov/PSA/2025/PSA251125)
 
-Bring in your transaction history from bank or brokerage statements with an AI assistant over MCP, then let automatic Email Alert Sync pick up new bank alerts. Review transactions in batches or enter them by hand. Both import options work in local and cloud mode, and neither needs your online banking login. [Imports and automation](#imports-and-automation)
+Bring in statement history with an AI assistant over MCP, then use automatic Email Alert Sync to pick up new bank alerts for review. Both imports are optional, work in local and cloud mode, and use records you already have without asking for your online banking login. Your assistant reads the statement file. For email sync, you choose the AI endpoint and can use a model on your own machine in local mode. [Imports and automation](#imports-and-automation)
 
 ## Features
 
 | Area | What you can do |
 | --- | --- |
+| **[Local data ownership](#privacy-and-data-ownership)** | Keep your ledger on hardware you control and back up the SQLite file yourself. |
 | Accounts and transactions | Group accounts by institution and maintain a ledger in each account's currency. Review imported transactions before marking them Confirmed. |
+| **[MCP statement sync](#mcp-statement-imports-and-transaction-search)** | Import bank and brokerage statements on demand with a compatible AI assistant in local or cloud mode. |
+| **[Automatic Email Alert Sync](#email-alert-sync)** | Import transactions from new bank alert emails automatically after setup in local or cloud mode. |
 | Transfers | Record both legs as one transfer. For cross-currency transfers, the amounts determine the realised exchange rate. |
 | Fixed deposits | Track principal through opening, top-ups and withdrawals. |
 | Reconciliation | Compare the ledger with a bank-reported BalanceSnapshot and track how each Discrepancy was resolved. |
@@ -66,6 +69,14 @@ DATABASE_PATH=/data/money-watch.db DEPLOYMENT_MODE=local pnpm exec next start --
 
 ### Cloud with Postgres
 
+#### Prerequisites
+
+To use the hosted version, open Open Money in your browser and select **Sign in**. [Open Money hosted app](https://money-watch-me.vercel.app/)
+
+To deploy your own cloud instance, you need Node.js 22, pnpm, a Next.js host such as Vercel, and a Postgres connection with permission to apply app migrations. Use a Supabase Auth project or configure static logins. Email Alert Sync requires additional credentials and scheduling only if you enable it. [Email Alert Sync](#email-alert-sync)
+
+#### Deploy your own instance
+
 1. Copy `env.example` to `.env.local`. Set `DEPLOYMENT_MODE=cloud` and `POSTGRES_URL`. For Supabase Postgres, use the Session pooler connection string on port 5432. [Environment template](env.example) · [Supabase database connections](https://supabase.com/docs/guides/database/connecting-to-postgres)
 2. Choose an authentication provider.
    - **Supabase Auth** is the default. Set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`. In Supabase, set the app's Site URL and allow `<origin>/auth/callback` and `<origin>/auth/callback?next=/login/reset-password`. Enable Google if you need Google sign-in. For email/password sign-in, sign-up and recovery, set `NEXT_PUBLIC_TURNSTILE_SITE_KEY` in the app and the corresponding secret in Supabase CAPTCHA settings. Without the site key, those forms are hidden. [Supabase redirect URLs](https://supabase.com/docs/guides/auth/redirect-urls) · [Supabase CAPTCHA setup](https://supabase.com/docs/guides/auth/auth-captcha)
@@ -104,7 +115,8 @@ In **Settings → Email Alert Sync**, configure the mailbox and your full LLM en
 
 - **Local.** The ledger lives in SQLite on the machine running the app. Core ledger workflows run without sending data to a bank or LLM. Local email credentials and settings are stored in plaintext in `~/.config/money-watch/settings.json`.
 - **Cloud.** The deployment operator controls Postgres and server logs. The app connects as the table owner, so dataset isolation depends on app-layer `owner_id` scoping. IMAP usernames and passwords are encrypted on save with `EMAIL_SYNC_ENCRYPTION_KEY`. Legacy plaintext credentials remain readable, and the LLM API key is outside that encryption. [Owner isolation](docs/adr/0006-drop-rls-for-app-layer-owner-filtering.md) · [Credential storage](docs/adr/0012-imap-credentials-encrypted-at-rest-with-app-layer-key.md)
-- **AI data.** Your assistant reads the statement you give it and sends structured rows to Open Money. MCP search returns recorded transaction details to the connected assistant. Email sync sends candidate senders and subjects to your configured LLM, then sends subject and body for messages classified as alerts. Server logs include full LLM request and response bodies, which can contain email and financial details. [Email processing](docs/adr/0009-email-alert-sync-calls-llm-server-side.md)
+- **MCP.** Your assistant reads the statement you give it. Open Money receives structured rows. If you use MCP search, the connected assistant receives matching ledger transactions.
+- **Email Alert Sync.** Your configured AI endpoint receives candidate senders and subjects, then the subject and body of messages classified as alerts. Local mode can send these requests to a model running on your own machine. Server logs include full AI request and response bodies, which can contain email and financial details. [Email processing](docs/adr/0009-email-alert-sync-calls-llm-server-side.md)
 - **Network traffic.** The app has no built-in analytics or crash reporting. Set `NEXT_TELEMETRY_DISABLED=1` to opt out of Next.js telemetry. Builds fetch the Google font. Email sync connects to your IMAP provider and LLM host. IMAP hosts are checked in both tiers, and hosted LLM requests have additional host checks. [Host checks and limits](docs/adr/0013-provider-agnostic-llm-config-with-cloud-only-host-safety.md)
 
 ### Backups
@@ -122,7 +134,32 @@ Share trading tracks quantities. Cash legs, cost basis, market valuation, tradin
 
 ## Develop
 
-Use the startup command for your chosen mode above. To run Postgres and Auth tests locally, start the Docker-backed Supabase stack with `pnpm supabase:start`. Use its URL and publishable key for local Auth development and `postgresql://postgres:postgres@127.0.0.1:54322/postgres` for `POSTGRES_URL`. SQLite tests use a temporary database file. [Test setup and locations](docs/CODEMAP.md#test-locations)
+Install Git, Node.js 22, and pnpm. For local Postgres and Supabase Auth development, install and start Docker as well. [Supabase local development](https://supabase.com/docs/guides/local-development/cli/getting-started)
+
+```bash
+git clone https://github.com/vishal3152/Open-Money.git
+cd Open-Money
+pnpm install
+```
+
+### Develop with SQLite
+
+Start the browser app and open `http://127.0.0.1:3000`. Use `pnpm electron:dev` to develop in the desktop shell.
+
+```bash
+DEPLOYMENT_MODE=local pnpm exec next dev --hostname 127.0.0.1
+```
+
+### Develop cloud mode locally
+
+1. With Docker running, run `pnpm supabase:start` to start the local stack and apply the Postgres migrations.
+2. Copy `env.example` to `.env.local` if needed. Set `POSTGRES_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres` for the local database.
+3. For a test login, set `AUTH_PROVIDER=simple` and add a development-only `email:password` pair to `AUTH_USERS`. To develop against Supabase Auth, use the local API URL and publishable key shown by `pnpm exec supabase status` and configure the sign-in flow you need. [Authentication setup](#deploy-your-own-instance)
+4. Run `pnpm dev --hostname 127.0.0.1` and open `http://127.0.0.1:3000`.
+
+### Run checks
+
+SQLite tests use temporary database files. Start the local Supabase stack before running the full suite, which includes Postgres and Auth tests. [Test setup and locations](docs/CODEMAP.md#test-locations)
 
 ```bash
 pnpm test src/domain/transfer.test.ts
