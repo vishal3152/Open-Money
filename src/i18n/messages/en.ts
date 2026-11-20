@@ -94,6 +94,7 @@ export const en = {
   "marketing.localLlmBody": "Email Alert Sync sends sender information and subject lines to the AI service you choose. For messages it identifies as bank alerts, it also sends the message text.",
   "marketing.localLlmBoundary": "On a local install, you can use a model running on your own machine through a tool such as Ollama. The hosted app needs an AI service it can reach.",
   "marketing.bottomHeading": "Start your own ledger",
+  "marketing.contactLabel": "Contact",
 
   // Dashboard
   "dashboard.setup.welcome": "Welcome to Open Money",

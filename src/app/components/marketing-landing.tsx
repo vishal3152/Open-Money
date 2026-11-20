@@ -20,6 +20,7 @@ import {
   IconShieldCheck
 } from "@tabler/icons-react";
 
+import { CONTACT_EMAIL, CONTACT_MAILTO } from "@/config/contact";
 import type { Translator } from "@/i18n/translator";
 
 const DESKTOP_RELEASES_URL = "https://github.com/vishal3152/Open-Money/releases";
@@ -284,6 +285,13 @@ export function MarketingLanding({ t }: { t: Translator["t"] }) {
             </Link>
           </div>
         </section>
+
+        <footer className="pw-marketing-contact">
+          <p>
+            {t("marketing.contactLabel")}{" "}
+            <a href={CONTACT_MAILTO}>{CONTACT_EMAIL}</a>
+          </p>
+        </footer>
       </div>
     </main>
   );

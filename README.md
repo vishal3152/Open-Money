@@ -179,6 +179,10 @@ For SQLite schema changes, edit `src/db/schema.ts` and regenerate `drizzle/` wit
 
 Issues and pull requests are welcome. Follow the repo conventions, update the code map and README when your change affects them, and run tests, typecheck and lint before opening a PR. [Working agreement](AGENTS.md) · [Code map](docs/CODEMAP.md)
 
+## Contact
+
+Maintainer: [vishaly5@outlook.com](mailto:vishaly5@outlook.com)
+
 ## License
 
-[PolyForm Noncommercial 1.0.0](LICENSE). For commercial licensing, contact the maintainer through a GitHub issue.
+[PolyForm Noncommercial 1.0.0](LICENSE). For commercial licensing, email [vishaly5@outlook.com](mailto:vishaly5@outlook.com).
