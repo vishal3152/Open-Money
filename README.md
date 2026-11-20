@@ -46,7 +46,7 @@ Source builds use Node.js 22 and pnpm. Install dependencies with `pnpm install`.
 
 ### Desktop or local browser
 
-Published installers are listed under the previous project name. From this checkout, use `pnpm electron:dev` for development or `pnpm electron:start` for a production build. Electron always uses local SQLite and applies database migrations at startup. [MoneyWatch releases](https://github.com/vishal3152/MoneyWatch/releases)
+Published installers are on the [Open Money releases](https://github.com/vishal3152/Open-Money/releases) page. From this checkout, use `pnpm electron:dev` for development or `pnpm electron:start` for a production build. Electron always uses local SQLite and applies database migrations at startup.
 
 For a local browser session, run the following and open `http://127.0.0.1:3000`.
 
