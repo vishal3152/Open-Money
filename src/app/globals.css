@@ -4041,7 +4041,8 @@ p.pw-unresolved-alert-resolve {
   margin-top: 2rem;
 }
 
-.pw-marketing-primary {
+.pw-marketing-primary,
+.pw-marketing-secondary {
   display: inline-flex;
   min-height: 3.25rem;
   align-items: center;
@@ -4052,13 +4053,34 @@ p.pw-unresolved-alert-resolve {
   font-weight: 650;
   text-decoration: none;
   padding: 0.7rem 1.25rem;
+}
+
+.pw-marketing-primary {
   background: var(--pw-ink-strong);
   color: white;
 }
 
-.pw-marketing-primary:hover {
+.pw-marketing-primary:hover,
+.pw-marketing-primary:focus-visible {
   background: var(--pw-accent-deep);
   color: white;
+}
+
+.pw-marketing-secondary {
+  border: 1.5px solid var(--pw-ink-strong);
+  background: transparent;
+  color: var(--pw-ink-strong);
+}
+
+.pw-marketing-secondary:hover,
+.pw-marketing-secondary:focus-visible {
+  background: var(--pw-ink-strong);
+  color: white;
+}
+
+.pw-marketing-bottom-cta .pw-marketing-actions {
+  margin-top: 0;
+  flex-shrink: 0;
 }
 
 .pw-marketing-trust {
@@ -4148,6 +4170,108 @@ p.pw-unresolved-alert-resolve {
   margin: 0.8rem 0 0;
   color: var(--pw-ink-muted);
   line-height: 1.7;
+}
+
+.pw-marketing-why {
+  max-width: 42rem;
+  padding-block: 3.25rem;
+  border-top: 1px solid var(--pw-border);
+}
+
+.pw-marketing-why h2 {
+  margin: 0;
+  font-family: var(--pw-font-display);
+  font-size: clamp(1.7rem, 3.2vw, 2.4rem);
+  font-weight: 500;
+  letter-spacing: -0.035em;
+  line-height: 1.15;
+}
+
+.pw-marketing-why > p:last-child {
+  margin: 0.85rem 0 0;
+  color: var(--pw-ink-muted);
+  line-height: 1.7;
+}
+
+.pw-marketing-features {
+  padding-block: 4.5rem;
+  border-top: 1px solid var(--pw-border);
+}
+
+.pw-marketing-feature-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pw-marketing-feature-grid > li {
+  min-width: 0;
+  padding: 1.25rem 1.2rem 1.35rem;
+  border: 1px solid var(--pw-border);
+  border-radius: var(--pw-radius);
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.pw-marketing-feature-icon {
+  display: grid;
+  width: 2.6rem;
+  height: 2.6rem;
+  place-items: center;
+  border-radius: 0.85rem;
+  background: var(--pw-bg-deep);
+  color: var(--pw-ink-strong);
+}
+
+.pw-marketing-feature-grid h3 {
+  margin: 1rem 0 0.45rem;
+  font-family: var(--pw-font-display);
+  font-size: 1.15rem;
+  font-weight: 500;
+  letter-spacing: -0.03em;
+  line-height: 1.25;
+}
+
+.pw-marketing-feature-grid p {
+  margin: 0;
+  color: var(--pw-ink-muted);
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
+
+.pw-marketing-mode-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  margin: 0 0 1.5rem;
+  padding: 0;
+  list-style: none;
+}
+
+.pw-marketing-mode-grid > li {
+  min-width: 0;
+  padding: 1.15rem 1.2rem 1.25rem;
+  border: 1px solid var(--pw-border);
+  border-radius: var(--pw-radius);
+  background: rgba(255, 255, 255, 0.48);
+}
+
+.pw-marketing-mode-grid h3 {
+  margin: 0 0 0.4rem;
+  font-family: var(--pw-font-display);
+  font-size: 1.05rem;
+  font-weight: 500;
+  letter-spacing: -0.03em;
+  line-height: 1.25;
+}
+
+.pw-marketing-mode-grid p {
+  margin: 0;
+  color: var(--pw-ink-muted);
+  font-size: 0.86rem;
+  line-height: 1.55;
 }
 
 .pw-marketing-automation {
@@ -4562,15 +4686,6 @@ p.pw-unresolved-alert-resolve {
   font-size: clamp(1.7rem, 3vw, 2.4rem);
 }
 
-.pw-marketing-footer {
-  display: flex;
-  justify-content: space-between;
-  gap: 1rem;
-  padding-block: 1rem 1.75rem;
-  color: var(--pw-ink-muted);
-  font-size: 0.76rem;
-}
-
 @media (max-width: 760px) {
   .pw-marketing-hero {
     grid-template-columns: minmax(0, 1fr);
@@ -4591,15 +4706,26 @@ p.pw-unresolved-alert-resolve {
     max-width: 32rem;
   }
 
+  .pw-marketing-feature-grid,
+  .pw-marketing-mode-grid,
   .pw-marketing-automation-grid,
   .pw-marketing-control,
   .pw-marketing-privacy-grid {
     grid-template-columns: 1fr;
   }
 
+  .pw-marketing-why,
+  .pw-marketing-features,
   .pw-marketing-automation,
   .pw-marketing-privacy {
     padding-block: 3.5rem;
+  }
+}
+
+@media (min-width: 761px) and (max-width: 1100px) {
+  .pw-marketing-feature-grid,
+  .pw-marketing-mode-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -4657,7 +4783,14 @@ p.pw-unresolved-alert-resolve {
     gap: 0.6rem;
   }
 
-  .pw-marketing-primary {
+  .pw-marketing-primary,
+  .pw-marketing-secondary {
+    width: 100%;
+  }
+
+  .pw-marketing-bottom-cta .pw-marketing-actions {
+    align-items: stretch;
+    flex-direction: column;
     width: 100%;
   }
 
@@ -4687,11 +4820,6 @@ p.pw-unresolved-alert-resolve {
   .pw-marketing-privacy-main,
   .pw-marketing-privacy-card {
     padding: 1.2rem;
-  }
-
-  .pw-marketing-footer {
-    flex-direction: column;
-    gap: 0.25rem;
   }
 }
 

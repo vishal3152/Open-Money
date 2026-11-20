@@ -11,51 +11,70 @@ describe("MarketingLanding", () => {
     const translator = createTranslator("en", getCatalog("en"));
     const html = renderToStaticMarkup(createElement(MarketingLanding, { t: translator.t }));
 
-    expect(html).toContain("Know what you have. Trust every balance.");
-    expect(html).toContain("personal finance tracker");
-    expect(html).toContain("Money spread across banks and currencies is hard to keep straight");
-    expect(html).toContain("against the bank&#x27;s reported numbers");
-    expect(html).toContain("Use AI to prepare transactions");
+    expect(html).toContain("A privacy-first ledger on your own device");
+    expect(html).toContain("Enter transactions and reconcile balances without connecting to a bank or AI service");
+    expect(html).toContain("Compare your ledger with the bank’s reported balance");
+    expect(html).toContain("mark a discrepancy as disputed");
+    expect(html).toContain("Built as a Microsoft Money successor you can run yourself");
+    expect(html).toContain("Totals stay separate by currency");
     expect(html).toContain('href="/login"');
     expect(html).toContain("Sign in to Open Money");
+    expect(html).toContain('href="https://github.com/vishal3152/Open-Money/releases"');
+    expect(html).toContain("Download desktop app");
     expect(html).toContain('href="https://github.com/vishal3152/Open-Money"');
     expect(html).toContain("Run it yourself");
     expect(html).toContain('src="/marketing/dashboard-demo.png"');
     expect(html).toContain("sample data");
   });
 
+  it("covers the README feature areas and parallel-ledger rationale", () => {
+    const translator = createTranslator("en", getCatalog("en"));
+    const html = renderToStaticMarkup(createElement(MarketingLanding, { t: translator.t }));
+
+    expect(html).toContain("An independent record next to your bank");
+    expect(html).toContain("Keeping a parallel ledger gives you something to compare");
+    expect(html).toContain("Accounts and transactions");
+    expect(html).toContain("Record both legs as one transfer");
+    expect(html).toContain("Track principal through opening, top-ups and withdrawals");
+    expect(html).toContain("Compare the ledger with a bank-reported BalanceSnapshot");
+    expect(html).toContain("Track whole-share trades and net holdings");
+    expect(html).toContain("English, Simplified Chinese and Arabic");
+    expect(html).toContain("Desktop or local browser");
+    expect(html).toContain("Self-hosted SQLite");
+    expect(html).toContain("one dataset per signed-in Owner");
+  });
+
   it("explains statement import and email sync in plain language", () => {
     const translator = createTranslator("en", getCatalog("en"));
     const html = renderToStaticMarkup(createElement(MarketingLanding, { t: translator.t }));
 
-    expect(html).toContain("Upload a statement — skip the data entry");
-    expect(html).toContain("Connect an assistant like Claude or Cursor to prepare statement imports and answer questions about your Open Money records");
+    expect(html).toContain("Import a bank or brokerage statement");
+    expect(html).toContain("Open MCP in Open Money to see how to connect a compatible AI assistant");
     expect(html).toContain("Ask about the transactions you have recorded");
     expect(html).toContain("Search by account, date, description, category, or money in and out");
     expect(html).toContain("matching recorded transaction details are returned to your connected assistant");
-    expect(html).toContain("Open Money receives the organized transactions, not the original file");
-    expect(html).toContain("Turn bank alert emails into draft transactions");
+    expect(html).toContain("Your assistant reads the file and sends only the extracted entries to Open Money");
+    expect(html).toContain("automatically imports transactions it can match to an account");
     expect(html).toContain("No online banking password required");
-    expect(html).toContain("Review every draft before it becomes part of your ledger");
-    expect(html).not.toContain("MCP");
+    expect(html).toContain("Imported entries count toward balances and holdings before confirmation");
+    expect(html).toContain("Resolve flagged duplicates before confirming a batch");
+    expect(html).toContain("creates a BalanceSnapshot and runs Reconciliation");
   });
 
   it("states the local hosted privacy boundaries without overpromising", () => {
     const translator = createTranslator("en", getCatalog("en"));
     const html = renderToStaticMarkup(createElement(MarketingLanding, { t: translator.t }));
 
-    expect(html).toContain("Self-hosted");
-    expect(html).toContain("Run it as a desktop app, or host it on your own server");
-    expect(html).toContain("single SQLite file");
+    expect(html).toContain("Sign in to use the hosted app");
+    expect(html).toContain("Run it your way");
+    expect(html).toContain("Keep your ledger in a SQLite file");
     expect(html).toContain("No account or login in local mode");
-    expect(html).toContain("No trackers, analytics, or crash reporting in the app");
+    expect(html).toContain("No built-in analytics or crash reporting");
     expect(html).toContain("Open Money never asks for your online banking login");
-    expect(html).toContain("Local mode makes no network calls unless you enable email sync");
-    expect(html).toContain("On a local hosted install");
-    expect(html).toContain("a local Ollama model for email sync");
-    expect(html).toContain("Email alert text goes to the LLM host you configure");
-    expect(html).toContain("Unclear matches wait for you instead of being guessed");
-    expect(html).not.toContain("matches the right account");
+    expect(html).toContain("Record transactions and reconcile balances offline");
+    expect(html).toContain("use a model on your own machine, such as Ollama");
+    expect(html).toContain("Email Alert Sync sends alert text to the AI service you configure");
+    expect(html).toContain("Unclear alerts wait in the review queue");
   });
 
   it("provides localized search metadata for each supported language", () => {
@@ -63,11 +82,11 @@ describe("MarketingLanding", () => {
     const chinese = getMarketingMetadata("zh");
     const arabic = getMarketingMetadata("ar");
 
-    expect(english.title).toContain("Multi-Currency Personal Finance Tracker");
-    expect(english.description).toContain("Reconcile every balance");
-    expect(chinese.title).toContain("多币种");
-    expect(chinese.description).toContain("核对每个余额");
-    expect(arabic.title).toContain("متعدد العملات");
-    expect(arabic.description).toContain("طابق كل رصيد");
+    expect(english.title).toContain("Privacy-First Multi-Currency Ledger");
+    expect(english.description).toContain("privacy-first personal ledger");
+    expect(chinese.title).toContain("隐私优先");
+    expect(chinese.description).toContain("隐私优先");
+    expect(arabic.title).toContain("الخصوصية أولاً");
+    expect(arabic.description).toContain("الخصوصية أولاً");
   });
 });

@@ -2,18 +2,75 @@ import Link from "next/link";
 import Image from "next/image";
 import {
   IconArrowUpRight,
+  IconArrowsLeftRight,
+  IconBuildingBank,
+  IconChartCandle,
   IconCheck,
   IconCpu,
   IconDatabase,
+  IconDownload,
   IconFileText,
   IconKeyOff,
+  IconLanguage,
   IconLock,
   IconMail,
+  IconPigMoney,
+  IconScale,
   IconSearch,
   IconShieldCheck
 } from "@tabler/icons-react";
 
 import type { Translator } from "@/i18n/translator";
+
+const DESKTOP_RELEASES_URL = "https://github.com/vishal3152/Open-Money/releases";
+
+const FEATURES = [
+  {
+    icon: IconBuildingBank,
+    titleKey: "marketing.featureAccountsTitle",
+    bodyKey: "marketing.featureAccountsBody"
+  },
+  {
+    icon: IconArrowsLeftRight,
+    titleKey: "marketing.featureTransfersTitle",
+    bodyKey: "marketing.featureTransfersBody"
+  },
+  {
+    icon: IconPigMoney,
+    titleKey: "marketing.featureDepositsTitle",
+    bodyKey: "marketing.featureDepositsBody"
+  },
+  {
+    icon: IconScale,
+    titleKey: "marketing.featureReconcileTitle",
+    bodyKey: "marketing.featureReconcileBody"
+  },
+  {
+    icon: IconChartCandle,
+    titleKey: "marketing.featureSharesTitle",
+    bodyKey: "marketing.featureSharesBody"
+  },
+  {
+    icon: IconLanguage,
+    titleKey: "marketing.featureLanguagesTitle",
+    bodyKey: "marketing.featureLanguagesBody"
+  }
+] as const;
+
+const MODES = [
+  {
+    titleKey: "marketing.modeDesktopTitle",
+    bodyKey: "marketing.modeDesktopBody"
+  },
+  {
+    titleKey: "marketing.modeSelfHostedTitle",
+    bodyKey: "marketing.modeSelfHostedBody"
+  },
+  {
+    titleKey: "marketing.modeCloudTitle",
+    bodyKey: "marketing.modeCloudBody"
+  }
+] as const;
 
 export function MarketingLanding({ t }: { t: Translator["t"] }) {
   return (
@@ -25,6 +82,13 @@ export function MarketingLanding({ t }: { t: Translator["t"] }) {
             <h1 id="marketing-heading">{t("marketing.heading")}</h1>
             <p className="pw-marketing-lede">{t("marketing.lede")}</p>
             <div className="pw-marketing-actions">
+              <a
+                className="pw-marketing-secondary"
+                href={DESKTOP_RELEASES_URL}
+              >
+                {t("marketing.desktopCta")}
+                <IconDownload aria-hidden="true" size={19} />
+              </a>
               <Link className="pw-marketing-primary" href="/login">
                 {t("marketing.cta")}
                 <IconArrowUpRight aria-hidden="true" size={19} />
@@ -49,6 +113,35 @@ export function MarketingLanding({ t }: { t: Translator["t"] }) {
               <figcaption>{t("marketing.demoCaption")}</figcaption>
             </figure>
           </div>
+        </section>
+
+        <section className="pw-marketing-why" aria-labelledby="marketing-why-heading">
+          <p className="pw-marketing-kicker">{t("marketing.whyEyebrow")}</p>
+          <h2 id="marketing-why-heading">{t("marketing.whyHeading")}</h2>
+          <p>{t("marketing.whyBody")}</p>
+        </section>
+
+        <section className="pw-marketing-features" aria-labelledby="marketing-features-heading">
+          <div className="pw-marketing-section-heading">
+            <p className="pw-marketing-kicker">{t("marketing.featuresEyebrow")}</p>
+            <h2 id="marketing-features-heading">{t("marketing.featuresHeading")}</h2>
+            <p>{t("marketing.featuresLede")}</p>
+          </div>
+
+          <ul className="pw-marketing-feature-grid">
+            {FEATURES.map((feature) => {
+              const Icon = feature.icon;
+              return (
+                <li key={feature.titleKey}>
+                  <span className="pw-marketing-feature-icon" aria-hidden="true">
+                    <Icon size={22} stroke={1.8} />
+                  </span>
+                  <h3>{t(feature.titleKey)}</h3>
+                  <p>{t(feature.bodyKey)}</p>
+                </li>
+              );
+            })}
+          </ul>
         </section>
 
         <section className="pw-marketing-automation" aria-labelledby="marketing-automation-heading">
@@ -129,6 +222,15 @@ export function MarketingLanding({ t }: { t: Translator["t"] }) {
             <p>{t("marketing.privacyLede")}</p>
           </div>
 
+          <ul className="pw-marketing-mode-grid">
+            {MODES.map((mode) => (
+              <li key={mode.titleKey}>
+                <h3>{t(mode.titleKey)}</h3>
+                <p>{t(mode.bodyKey)}</p>
+              </li>
+            ))}
+          </ul>
+
           <div className="pw-marketing-privacy-grid">
             <article className="pw-marketing-privacy-main">
               <div className="pw-marketing-privacy-card-top">
@@ -183,15 +285,20 @@ export function MarketingLanding({ t }: { t: Translator["t"] }) {
             <p className="pw-marketing-kicker">{t("marketing.bottomEyebrow")}</p>
             <h2 id="marketing-bottom-heading">{t("marketing.bottomHeading")}</h2>
           </div>
-          <Link className="pw-marketing-primary" href="/login">
-            {t("marketing.cta")}
-            <IconArrowUpRight aria-hidden="true" size={19} />
-          </Link>
+          <div className="pw-marketing-actions">
+            <a
+              className="pw-marketing-secondary"
+              href={DESKTOP_RELEASES_URL}
+            >
+              {t("marketing.desktopCta")}
+              <IconDownload aria-hidden="true" size={19} />
+            </a>
+            <Link className="pw-marketing-primary" href="/login">
+              {t("marketing.cta")}
+              <IconArrowUpRight aria-hidden="true" size={19} />
+            </Link>
+          </div>
         </section>
-        <footer className="pw-marketing-footer">
-          <span>{t("marketing.footer")}</span>
-          <span>{t("marketing.footerLine")}</span>
-        </footer>
       </div>
     </main>
   );
