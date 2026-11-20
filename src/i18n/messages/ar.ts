@@ -90,6 +90,7 @@ export const ar: Catalog = {
   "marketing.localLlmBody": "ترسل مزامنة تنبيهات البريد معلومات المرسِل وعناوين الرسائل إلى خدمة الذكاء الاصطناعي التي تختارها. وترسل أيضًا نص الرسائل التي تحددها الخدمة على أنها تنبيهات بنكية.",
   "marketing.localLlmBoundary": "في التثبيت المحلي، يمكنك استخدام نموذج يعمل على جهازك عبر أداة مثل Ollama. يحتاج التطبيق المستضاف إلى خدمة ذكاء اصطناعي يمكنه الوصول إليها.",
   "marketing.bottomHeading": "ابدأ سجلّك المالي",
+  "marketing.contactLabel": "التواصل",
 
   // Dashboard
   "dashboard.setup.welcome": "مرحبًا بك في Open Money",

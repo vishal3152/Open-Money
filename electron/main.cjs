@@ -4,13 +4,17 @@ const { mkdirSync, readFileSync, writeFileSync } = require("node:fs");
 const { homedir } = require("node:os");
 const path = require("node:path");
 
-const { app, BrowserWindow, dialog, ipcMain } = require("electron");
+const { app, BrowserWindow, dialog, ipcMain, Menu, shell } = require("electron");
 
 const {
   resolveAppLayout,
   resolveChildProcessEnv,
   resolveNodeBinary
 } = require("./app-paths.cjs");
+const {
+  buildAboutPanelOptions,
+  buildApplicationMenuTemplate
+} = require("./contact.cjs");
 
 const isDev = process.env.ELECTRON_DEV === "1";
 // Fixed (not random) so bookmarks and deep links stay stable across relaunches.
@@ -236,6 +240,16 @@ function stopNextServer() {
 
 async function main() {
   await app.whenReady();
+
+  app.setAboutPanelOptions(buildAboutPanelOptions());
+  Menu.setApplicationMenu(
+    Menu.buildFromTemplate(
+      buildApplicationMenuTemplate({
+        platform: process.platform,
+        shell
+      })
+    )
+  );
 
   ipcMain.handle("pick-database-file", async (event) => {
     const window = BrowserWindow.fromWebContents(event.sender);

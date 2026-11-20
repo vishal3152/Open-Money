@@ -3,6 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "license": "PolyForm-Noncommercial-1.0.0",
+  "author": {
+    "name": "Open Money",
+    "email": "vishaly5@outlook.com"
+  },
   "main": "electron/main.cjs",
   "scripts": {
     "dev": "tsx scripts/prepare-cloud-database.ts && DEPLOYMENT_MODE=cloud next dev",
@@ -71,6 +75,7 @@
       "electron/main.cjs",
       "electron/preload.cjs",
       "electron/app-paths.cjs",
+      "electron/contact.cjs",
       "package.json"
     ],
     "mac": {

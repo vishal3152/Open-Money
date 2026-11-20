@@ -292,7 +292,7 @@ done
 rm -rf "$RESOURCES_DIR"
 
 echo "==> Staging Electron app directory (empty deps — avoid packing project node_modules into asar)"
-cp "$ROOT/electron/main.cjs" "$ROOT/electron/preload.cjs" "$ROOT/electron/app-paths.cjs" "$APP_DIR/electron/"
+cp "$ROOT/electron/main.cjs" "$ROOT/electron/preload.cjs" "$ROOT/electron/app-paths.cjs" "$ROOT/electron/contact.cjs" "$APP_DIR/electron/"
 node <<'NODE'
 const fs = require("node:fs");
 const path = require("node:path");
