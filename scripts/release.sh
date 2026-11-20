@@ -97,7 +97,7 @@ upload_github_release() {
     gh release upload "$tag" "${assets[@]}" --clobber
   else
     gh release create "$tag" "${assets[@]}" \
-      --title "Paisa-Watch ${tag}" \
+      --title "Open Money ${tag}" \
       --generate-notes
   fi
 
