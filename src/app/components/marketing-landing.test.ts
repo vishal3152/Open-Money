@@ -62,6 +62,21 @@ describe("MarketingLanding", () => {
     expect(html).toContain("a model running on your own machine");
   });
 
+  it("answers common product questions in an FAQ section", () => {
+    const translator = createTranslator("en", getCatalog("en"));
+    const html = renderToStaticMarkup(createElement(MarketingLanding, { t: translator.t }));
+
+    expect(html).toContain('id="faq"');
+    expect(html).toContain("Frequently asked questions");
+    expect(html).toContain("Does this connect to my bank?");
+    expect(html).toContain("never ask for online banking credentials");
+    expect(html).toContain("Is my financial data sent anywhere?");
+    expect(html).toContain("Which mode should I pick?");
+    expect(html).toContain("Can the desktop app use cloud mode?");
+    expect(html).toContain("How do I back up my data?");
+    expect(html).toContain("Do I have to use the AI features?");
+  });
+
   it.each([
     ["en", "Bank Reconciliation", "cloud app"],
     ["zh", "银行对账", "云端版"],

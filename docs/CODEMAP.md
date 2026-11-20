@@ -134,7 +134,7 @@ English, Simplified Chinese, Arabic; locale is the `pw-locale` cookie, set in Se
 #### Dashboard
 
 - `page.tsx` — signed-out cloud visitors get `components/marketing-landing.tsx`; otherwise per-currency totals (no cross-currency total), Account/FixedDeposit groups via `components/institutions-browser.tsx` (client-side name/number search and per-Account income/expense shortcuts), ShareTradingAccounts section (Holdings count via `listAllWithHoldingCounts()`, no valuation), six recent Transactions (`listRecentByAccountIds`). Links to expensive detail routes disable prefetch.
-- `components/marketing-landing.tsx` — localized public cloud introduction, plain-language MCP import/transaction-query and email-sync explanations, local/self-hosted privacy boundaries, and links to cloud sign-in, desktop releases, and self-hosting setup; its dashboard screenshot uses sample data.
+- `components/marketing-landing.tsx` — localized public cloud introduction, plain-language MCP import/transaction-query and email-sync explanations, local/self-hosted privacy boundaries, FAQ accordion, and links to cloud sign-in, desktop releases, and self-hosting setup; its dashboard screenshot uses sample data.
 
 #### Entity routes
 
