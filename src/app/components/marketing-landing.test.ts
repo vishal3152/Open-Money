@@ -18,7 +18,7 @@ describe("MarketingLanding", () => {
     expect(html).toContain("Use AI to prepare transactions");
     expect(html).toContain('href="/login"');
     expect(html).toContain("Sign in to Open Money");
-    expect(html).toContain('href="https://github.com/vishal3152/Money-Watch"');
+    expect(html).toContain('href="https://github.com/vishal3152/Open-Money"');
     expect(html).toContain("Run it yourself");
     expect(html).toContain('src="/marketing/dashboard-demo.png"');
     expect(html).toContain("sample data");

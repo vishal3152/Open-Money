@@ -141,7 +141,7 @@ export function MarketingLanding({ t }: { t: Translator["t"] }) {
               <p>{t("marketing.selfHostedBody")}</p>
               <a
                 className="pw-marketing-github-link"
-                href="https://github.com/vishal3152/Money-Watch"
+                href="https://github.com/vishal3152/Open-Money"
               >
                 {t("marketing.selfHostedLink")}
                 <IconArrowUpRight aria-hidden="true" size={18} />
