@@ -43,3 +43,4 @@ credentials.json
 # Firebase local project link
 .firebaserc
 .vercel
+.env*

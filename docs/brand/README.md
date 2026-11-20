@@ -25,7 +25,7 @@ Independent balance verification across institutions and currencies. The **Verif
 
 - **Spelling:** `Open Money` (two words)
 - **Color:** Ink Strong `#17191c`.
-- **Type:** Bold sans serif; the header uses the app's Inter font. The standalone lockup preserves the selected concept's original lettering.
+- **Type:** Bold sans serif; the header uses the app's Inter font. The standalone lockup uses Arial Bold.
 - No underline.
 
 ## UI tokens
