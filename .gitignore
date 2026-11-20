@@ -44,3 +44,4 @@ credentials.json
 .firebaserc
 .vercel
 .env*
+package-lock.json
