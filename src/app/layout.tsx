@@ -19,7 +19,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Money Watch",
+  title: "Open Money",
   description:
     "Track money across institutions and currencies, record what moves, and reconcile your records with reported balances."
 };

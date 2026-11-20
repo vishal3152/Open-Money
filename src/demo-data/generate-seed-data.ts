@@ -1,5 +1,5 @@
 /**
- * Deterministic demo seed dataset for Money Watch.
+ * Deterministic demo seed dataset for Open Money.
  * Run: `pnpm demo:generate` → writes `public/demo-data/seed-data.json`
  */
 

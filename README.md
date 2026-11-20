@@ -1,14 +1,14 @@
 <div align="center">
 
-<img src="public/brand/logo-lockup.svg" alt="Money Watch" width="320" />
+<img src="public/brand/logo-lockup.svg" alt="Open Money" width="320" />
 
-# Money Watch
+# Open Money
 
 **Know exactly where your money is — to the paise.**
 
 [![Audited with Cloudflare security-audit-skill](https://img.shields.io/badge/security_audit-Cloudflare-F38020?style=flat&logo=cloudflare&logoColor=white)](https://github.com/cloudflare/security-audit-skill)
 
-Money Watch is a personal system of record for money held across multiple institutions and currencies — built to _verify_ balances, not just display them.
+Open Money is a personal system of record for money held across multiple institutions and currencies — built to _verify_ balances, not just display them.
 
 [Hosted app](https://money-watch-me.vercel.app/) · [Run it locally](#a-local--this-machine-sqlite-simplest) · [Self-host it](#b-self-hosted--your-server-or-nas-sqlite) · [Cloud mode](#c-cloud-hosted--vercel--supabase-postgres-multi-user) · [Architecture](#architecture) · [FAQ](#faq)
 
@@ -18,11 +18,11 @@ Money Watch is a personal system of record for money held across multiple instit
 
 ## Why this exists
 
-Money Watch focuses on checking bank-reported balances against an independently maintained ledger, rather than on budgeting or spending charts.
+Open Money focuses on checking bank-reported balances against an independently maintained ledger, rather than on budgeting or spending charts.
 
 Across institutions and currencies, the balance you expect can differ from the bank-reported amount. A wire arrives with a different FX rate than quoted. An unexpected fee lands. A fixed deposit matures into the wrong account. An independent ledger gives you a basis for investigating the difference.
 
-**Money Watch is built the other way around.** You keep your own ledger. Periodically you capture what the bank _claims_ your balance is, and the app formally compares it against what your ledger computes. The difference is a first-class record — a `Discrepancy` — that you must explicitly resolve as _corrected-my-record_ or _disputed-with-bank_, or leave open. Resolving a discrepancy as corrected creates an explicit `Adjustment` record, distinct from real bank activity. Ordinary manually entered transactions can still be edited or deleted.
+**Open Money is built the other way around.** You keep your own ledger. Periodically you capture what the bank _claims_ your balance is, and the app formally compares it against what your ledger computes. The difference is a first-class record — a `Discrepancy` — that you must explicitly resolve as _corrected-my-record_ or _disputed-with-bank_, or leave open. Resolving a discrepancy as corrected creates an explicit `Adjustment` record, distinct from real bank activity. Ordinary manually entered transactions can still be edited or deleted.
 
 That's the whole thesis: **independent verification over trust.**
 
@@ -159,7 +159,7 @@ Two ways to get transactions in without manual entry. Committed batches save row
 
 Give a bank statement (CSV/PDF) to an assistant that can read that format and connect to this HTTP MCP endpoint. It can create missing institutions/accounts with your confirmation, preview rows with `stage_import`, then save an ImportBatch with `commit_import`. Staging writes nothing; committing saves reviewable `Imported` rows that already affect balances. Check the parsed rows before confirming them.
 
-Money Watch exposes an MCP server at `/api/mcp` with tools to stage and commit statement imports (`stage_import`, `commit_import`), manage institutions and accounts (`list_institutions`, `create_institution`, `list_accounts`, `create_account`, `resolve_account`), and search recorded bank-account transactions (`search_transactions`). Trading tools are `list_share_trading_accounts`, `create_share_trading_account`, `resolve_share_trading_account`, `stage_stock_import` and `commit_stock_import`.
+Open Money exposes an MCP server at `/api/mcp` with tools to stage and commit statement imports (`stage_import`, `commit_import`), manage institutions and accounts (`list_institutions`, `create_institution`, `list_accounts`, `create_account`, `resolve_account`), and search recorded bank-account transactions (`search_transactions`). Trading tools are `list_share_trading_accounts`, `create_share_trading_account`, `resolve_share_trading_account`, `stage_stock_import` and `commit_stock_import`.
 
 - **Local / desktop / self-hosted:** no token is needed. The endpoint checks that the `Host` header names localhost/127.0.0.1/[::1] and that any `Origin` is also loopback; it does not authenticate a remote caller. Keep it reachable only locally (use a tunnel to loopback for a remote server). Get the exact URL and a ready-to-paste `mcp.json` from **MCP** in navigation (`/settings/mcp`, also linked from Settings).
 - **Cloud-hosted:** generate an MCP access token on that same MCP page (shown once, stored hashed) and send it as `Authorization: Bearer <token>`. ([ADR-0011](docs/adr/0011-mcp-cloud-auth-static-bearer-token.md))
@@ -185,12 +185,12 @@ Local mode stores the ledger on the machine running the app. Cloud mode stores i
 
 ### In local / self-hosted mode
 
-- **Your ledger is stored in SQLite.** Choose the file with `DATABASE_PATH` or Settings. Stop the app and poller before copying it for a consistent backup. Email credentials/settings live separately in `~/.config/money-watch/settings.json` in plaintext. Money Watch supplies no file-sync or conflict-resolution mechanism; backup/version history depends on your storage provider.
+- **Your ledger is stored in SQLite.** Choose the file with `DATABASE_PATH` or Settings. Stop the app and poller before copying it for a consistent backup. Email credentials/settings live separately in `~/.config/money-watch/settings.json` in plaintext. Open Money supplies no file-sync or conflict-resolution mechanism; backup/version history depends on your storage provider.
 - **No application account or login.** A Next.js HTTP server still runs, including inside the desktop app. Local mode has no per-user access controls.
 - **No application analytics or crash-reporting integration is configured.** Core local ledger workflows do not call a bank or LLM. This is not a network-isolation guarantee: Next.js has framework telemetry, and builds download the Google font. Use `NEXT_TELEMETRY_DISABLED=1` to disable Next.js telemetry. Email sync contacts the configured IMAP and LLM hosts; an external AI assistant has its own data handling.
-- **No bank credentials, ever.** Money Watch never asks for online-banking logins and has no screen-scraping or aggregator integration. It reads statements you already have and alert emails your bank already sent you.
+- **No bank credentials, ever.** Open Money never asks for online-banking logins and has no screen-scraping or aggregator integration. It reads statements you already have and alert emails your bank already sent you.
 - **The local MCP endpoint validates loopback Host/Origin headers.** Restrict network access to it as well; those headers are not remote-client authentication.
-- **Statement files never touch the app.** With MCP import, your AI assistant reads the PDF/CSV itself and sends the app structured rows. Money Watch never receives the file.
+- **Statement files never touch the app.** With MCP import, your AI assistant reads the PDF/CSV itself and sends the app structured rows. Open Money never receives the file.
 
 ### In cloud mode
 
@@ -408,13 +408,13 @@ There is no household or shared-access feature. Cloud mode isolates one dataset 
 <details>
 <summary><b>Why integer minor units instead of decimals?</b></summary><br>
 
-Amounts such as 0.1 cannot always be represented exactly as binary floating-point fractions. Money Watch parses decimal input into safe-integer minor units and stores/sums those integers for ledger balances. Currency precision is defined in `src/domain/currency.ts`; realised FX rates are derived numeric ratios.
+Amounts such as 0.1 cannot always be represented exactly as binary floating-point fractions. Open Money parses decimal input into safe-integer minor units and stores/sums those integers for ledger balances. Currency precision is defined in `src/domain/currency.ts`; realised FX rates are derived numeric ratios.
 </details>
 
 <details>
 <summary><b>Does the AI see my bank statements?</b></summary><br>
 
-With MCP import, your assistant reads the statement under its own privacy terms and sends Money Watch structured rows, not the original document. Email sync sends candidate sender names/subjects and classified alert bodies to the configured LLM ([ADR-0009](docs/adr/0009-email-alert-sync-calls-llm-server-side.md)). In local mode, a same-machine Ollama endpoint keeps that LLM processing local.
+With MCP import, your assistant reads the statement under its own privacy terms and sends Open Money structured rows, not the original document. Email sync sends candidate sender names/subjects and classified alert bodies to the configured LLM ([ADR-0009](docs/adr/0009-email-alert-sync-calls-llm-server-side.md)). In local mode, a same-machine Ollama endpoint keeps that LLM processing local.
 </details>
 
 <details>

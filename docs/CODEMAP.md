@@ -62,7 +62,7 @@ Signed-out cloud visitors see the public marketing page; signed-in cloud and loc
 
 ### Root documents & tooling entry points
 
-- `AGENTS.md` — agent operating instructions. `docs/specs/` — domain vocabulary and feature behavior. `DESIGN.md` / `docs/brand/README.md` — visual design and brand (display brand **Money Watch**).
+- `AGENTS.md` — agent operating instructions. `docs/specs/` — domain vocabulary and feature behavior. `DESIGN.md` / `docs/brand/README.md` — visual design and brand (display brand **Open Money**).
 - `docs/specs/`, `docs/adr/` — feature specs and ADRs. `docs/agents/` — agent guidance (`domain.md`, `issue-tracker.md`, `mobile-ux.md`, `product-qa.md`). `docs/qa/` — audits and test-case write-ups. `docs/mcp-setup.md`, `docs/cron-setup.md` — setup guides.
 - `package.json` — commands (`dev`, `build`, `test`, `lint`, `typecheck`, `electron:dev`, `electron:start`, `electron:package`, `release`, `supabase:start`, `email-sync:poll`, `perf:navigation`). `dev`/`start` run `scripts/prepare-cloud-database.ts` first and set `DEPLOYMENT_MODE=cloud`; `electron:start` builds with `DEPLOYMENT_MODE=local` (`scripts/electron-start-script.test.ts`).
 - `vitest.config.ts` / `src/test/vitest.setup.ts` — Vitest; the setup mocks `revalidateTag` (tests asserting form-options invalidation inject `deps.revalidate`); `revalidatePath` stays real.

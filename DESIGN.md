@@ -1,6 +1,6 @@
 ---
-name: Money Watch
-description: Figma Portfolio Global–aligned Operate UI for independent balance verification (Money Watch brand)
+name: Open Money
+description: Figma Portfolio Global–aligned Operate UI for independent balance verification (Open Money brand)
 colors:
   paper: "#f2f2f2"
   paper-deep: "#f2f2f2"
@@ -122,13 +122,13 @@ components:
     padding: "0.1rem 0.5rem"
 ---
 
-# Design System: Money Watch
+# Design System: Open Money
 
 ## Overview
 
 **Creative North Star: "Portfolio Global Paper"**
 
-Money Watch’s visual world is taken from Figma [Portfolio Tracker Draft → Portfolio Global (`152:2262`)](https://www.figma.com/design/YB80lPHpESKna9q8jmBEvE/Portfolio-Tracker-Draft?node-id=152-2262) — Inter Tight type, solid Wealth Blue `#387ed1` actions, flat warm-gray paper `#f2f2f2`, white cards with soft navy-tinted borders. Product structure stays Operate (task cards, lists, reconciliation), not the marketing/dashboard chrome layout.
+Open Money’s visual world is taken from Figma [Portfolio Tracker Draft → Portfolio Global (`152:2262`)](https://www.figma.com/design/YB80lPHpESKna9q8jmBEvE/Portfolio-Tracker-Draft?node-id=152-2262) — Inter Tight type, solid Wealth Blue `#387ed1` actions, flat warm-gray paper `#f2f2f2`, white cards with soft navy-tinted borders. Product structure stays Operate (task cards, lists, reconciliation), not the marketing/dashboard chrome layout.
 
 Density stays airy. One primary job per viewport. Create flows live in a single elevated form card; list and detail screens reuse the same paper/surface/ink vocabulary.
 
@@ -178,7 +178,7 @@ Density stays airy. One primary job per viewport. Create flows live in a single 
 ### Named Rules
 **The Tabular Money Rule.** Monetary amounts always use tabular numerals.
 
-**The Verified Monogram Rule.** Brand lockup: ink bold sans-serif Money Watch wordmark with no underline. Mark: ink M and Wealth Blue verification stroke; white on a blue tile for app icons — see `docs/brand/README.md`.
+**The Verified Monogram Rule.** Brand lockup: ink bold sans-serif Open Money wordmark with no underline. Mark: ink M and Wealth Blue verification stroke; white on a blue tile for app icons — see `docs/brand/README.md`.
 
 ## Layout
 

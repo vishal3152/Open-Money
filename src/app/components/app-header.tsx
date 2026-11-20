@@ -26,11 +26,11 @@ export async function AppHeader() {
   return (
     <header className={publicCloud ? "pw-header pw-header--public" : "pw-header"}>
       <div className="pw-header-start">
-        <Link className="pw-brand" href="/" prefetch={false} aria-label="Money Watch">
+        <Link className="pw-brand" href="/" prefetch={false} aria-label="Open Money">
           <BrandMark />
           <span className="pw-brand-name">
-            <span className="pw-brand-name-lead">Money</span>{" "}
-            <span className="pw-brand-name-tail">Watch</span>
+            <span className="pw-brand-name-lead">Open</span>{" "}
+            <span className="pw-brand-name-tail">Money</span>
           </span>
         </Link>
         {showNavTabs ? <NavTabs /> : null}

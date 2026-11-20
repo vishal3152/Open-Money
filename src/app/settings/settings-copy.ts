@@ -1,7 +1,7 @@
 import type { MessageKey } from "@/i18n/translator";
 
 /**
- * The settings screen's lede depends on which of Money Watch's deployment
+ * The settings screen's lede depends on which of Open Money's deployment
  * shapes is rendering it: desktop (Electron, always local), cloud
  * (Postgres-backed browser, Supabase or AUTH_PROVIDER=simple), or
  * self-hosted (local SQLite reached from a plain browser — Docker/NAS

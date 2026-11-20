@@ -4,7 +4,7 @@ type BrandMarkProps = {
   className?: string;
 };
 
-/** Shared verified monogram from the Money Watch brand asset. */
+/** Shared verified monogram from the Open Money brand asset. */
 export function BrandMark({ className = "pw-brand-mark" }: BrandMarkProps) {
   return (
     <Image

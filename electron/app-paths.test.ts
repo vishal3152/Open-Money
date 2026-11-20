@@ -119,7 +119,7 @@ describe("resolveNodeBinary", () => {
   });
 
   it("uses the background Electron helper as Node in packaged macOS builds", () => {
-    const resourcesPath = "/Applications/Money Watch.app/Contents/Resources";
+    const resourcesPath = "/Applications/Open Money.app/Contents/Resources";
     const layout = resolveAppLayout({
       isPackaged: true,
       isDev: false,
@@ -134,11 +134,11 @@ describe("resolveNodeBinary", () => {
         resourcesPath,
         layout,
         envNodeBinary: undefined,
-        electronExecPath: "/Applications/Money Watch.app/Contents/MacOS/Money Watch",
+        electronExecPath: "/Applications/Open Money.app/Contents/MacOS/Open Money",
         platform: "darwin"
       })
     ).toBe(
-      "/Applications/Money Watch.app/Contents/Frameworks/Money Watch Helper.app/Contents/MacOS/Money Watch Helper"
+      "/Applications/Open Money.app/Contents/Frameworks/Open Money Helper.app/Contents/MacOS/Open Money Helper"
     );
   });
 });

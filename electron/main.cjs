@@ -213,7 +213,7 @@ async function createMainWindow(appUrl) {
     height: 800,
     minWidth: 800,
     minHeight: 600,
-    title: "Money Watch",
+    title: "Open Money",
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,

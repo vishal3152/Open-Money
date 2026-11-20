@@ -17,7 +17,7 @@ describe("MarketingLanding", () => {
     expect(html).toContain("against the bank&#x27;s reported numbers");
     expect(html).toContain("Use AI to prepare transactions");
     expect(html).toContain('href="/login"');
-    expect(html).toContain("Sign in to Money Watch");
+    expect(html).toContain("Sign in to Open Money");
     expect(html).toContain('href="https://github.com/vishal3152/Money-Watch"');
     expect(html).toContain("Run it yourself");
     expect(html).toContain('src="/marketing/dashboard-demo.png"');
@@ -29,11 +29,11 @@ describe("MarketingLanding", () => {
     const html = renderToStaticMarkup(createElement(MarketingLanding, { t: translator.t }));
 
     expect(html).toContain("Upload a statement — skip the data entry");
-    expect(html).toContain("Connect an assistant like Claude or Cursor to prepare statement imports and answer questions about your Money Watch records");
+    expect(html).toContain("Connect an assistant like Claude or Cursor to prepare statement imports and answer questions about your Open Money records");
     expect(html).toContain("Ask about the transactions you have recorded");
     expect(html).toContain("Search by account, date, description, category, or money in and out");
     expect(html).toContain("matching recorded transaction details are returned to your connected assistant");
-    expect(html).toContain("Money Watch receives the organized transactions, not the original file");
+    expect(html).toContain("Open Money receives the organized transactions, not the original file");
     expect(html).toContain("Turn bank alert emails into draft transactions");
     expect(html).toContain("No online banking password required");
     expect(html).toContain("Review every draft before it becomes part of your ledger");
@@ -49,7 +49,7 @@ describe("MarketingLanding", () => {
     expect(html).toContain("single SQLite file");
     expect(html).toContain("No account or login in local mode");
     expect(html).toContain("No trackers, analytics, or crash reporting in the app");
-    expect(html).toContain("Money Watch never asks for your online banking login");
+    expect(html).toContain("Open Money never asks for your online banking login");
     expect(html).toContain("Local mode makes no network calls unless you enable email sync");
     expect(html).toContain("On a local hosted install");
     expect(html).toContain("a local Ollama model for email sync");

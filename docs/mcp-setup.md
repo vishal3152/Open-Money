@@ -1,7 +1,7 @@
 # Connecting an AI assistant (MCP setup)
 
 How to point Claude Desktop, Claude Code, Cursor, or another MCP-compatible client at
-Paisa-Watch's own MCP server so it can import a bank statement and search recorded Transactions.
+Open Money's own MCP server so it can import a bank statement and search recorded Transactions.
 See `docs/specs/import.md` for the import workflow; this page is only the client-side connection steps.
 
 The steps differ by deployment mode: local/desktop needs no credential at all
@@ -64,7 +64,7 @@ covered" below).
 
 ## 3. Verify it worked
 
-Ask the assistant something like "list my Paisa-Watch accounts". It should call the
+Ask the assistant something like "list my Open Money accounts". It should call the
 `list_accounts` tool and read back your Institutions/Accounts. Then try "show my latest
 five debit transactions"; it should call the read-only `search_transactions` tool. If it
 can't see the server at all, see Troubleshooting below.
@@ -83,7 +83,7 @@ can't see the server at all, see Troubleshooting below.
   the address in the URL matches what Settings currently shows (it's read live from the
   request, not hardcoded, so it changes if you change how the app is launched or deployed).
 - **Assistant sees the tools but the import looks wrong** — the assistant reads and
-  parses your statement itself; Paisa-Watch never sees the file. Re-check what you
+  parses your statement itself; Open Money never sees the file. Re-check what you
   pasted/uploaded to the assistant, not this server.
 
 ## Not covered

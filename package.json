@@ -60,8 +60,8 @@
   },
   "build": {
     "appId": "app.moneywatch.desktop",
-    "productName": "Money Watch",
-    "copyright": "Copyright © Money Watch",
+    "productName": "Open Money",
+    "copyright": "Copyright © Open Money",
     "icon": "public/brand/logo-mark.png",
     "directories": {
       "app": "dist/electron-app",
