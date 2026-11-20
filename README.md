@@ -6,13 +6,17 @@
 
 **Know exactly where your money is — to the paise.**
 
+[![Audited with Cloudflare security-audit-skill](https://img.shields.io/badge/security_audit-Cloudflare-F38020?style=flat&logo=cloudflare&logoColor=white)](https://github.com/cloudflare/security-audit-skill)
+
 [Hosted app](https://money-watch-me.vercel.app/) · [Desktop downloads](#desktop-or-local-browser) · [Run it yourself](#run-it-your-way)
 
 </div>
 
-Open Money is a personal ledger for accounts across institutions and currencies. Record a balance reported by your bank and compare it with the balance computed from your ledger. A mismatch stays open as a Discrepancy until you record an Adjustment or mark it as disputed with the bank.
+Open Money is a privacy-focused personal ledger for accounts across institutions and currencies. After Microsoft discontinued Money, we wanted a successor that let us keep our financial records on our own machines. [Microsoft Money support archive](https://mskb.pkisolutions.com/kb/894020)
 
-You can maintain the full ledger manually. Optional imports use statements you supply or bank alerts in your inbox. The app has no direct bank connection and does not ask for online banking credentials.
+Recent bank account takeover scams show how unauthorized transfers can appear in your account. Keeping a parallel ledger gives you an independent record to compare with your bank statement and investigate entries you don't recognize. Compare the bank's reported balance with your ledger balance and keep any discrepancy open until you record an Adjustment or mark it as disputed with the bank. [FBI account takeover alert](https://www.ic3.gov/PSA/2025/PSA251125)
+
+Bring in your transaction history from bank or brokerage statements with an AI assistant over MCP, then let automatic Email Alert Sync pick up new bank alerts. Review transactions in batches or enter them by hand. Both import options work in local and cloud mode, and neither needs your online banking login. [Imports and automation](#imports-and-automation)
 
 ## Features
 
@@ -80,9 +84,9 @@ DATABASE_PATH=/data/money-watch.db DEPLOYMENT_MODE=local pnpm exec next start --
 
 Both import paths are optional. Committed rows are **Imported** and already affect balances or holdings. Before confirming a batch, remove suspected duplicates or dismiss their flags. Editing a row leaves its flag in place. Confirming a bank batch with a closing balance also creates a BalanceSnapshot and runs Reconciliation. [Import behavior](docs/specs/import.md)
 
-### Statement imports and transaction search
+### MCP statement imports and transaction search
 
-Open **MCP** in the app navigation to find the connection URL and client configuration. A compatible assistant can read a bank or brokerage statement, preview rows and commit a batch for your review. It can also search transactions already in your ledger.
+Open **MCP** in the app navigation to find the connection URL and client configuration. Give a bank or brokerage statement to a compatible assistant to import transactions on demand. The assistant can preview the extracted rows, save a batch for your review, and search transactions already in your ledger.
 
 - **Local or self-hosted.** Keep the MCP endpoint on loopback. It checks the Host and Origin headers and has no remote-client authentication.
 - **Cloud.** Generate an access token from the MCP page and configure the client to send it as a bearer token. The app shows the token once and stores its hash. Clients that require OAuth cannot connect to the current endpoint.
@@ -93,8 +97,8 @@ Open **MCP** in the app navigation to find the connection URL and client configu
 
 In **Settings → Email Alert Sync**, configure the mailbox and your full LLM endpoint URL. The poller matches alerts by institution and the last four digits of the account number. Alerts that need correction appear in the Unresolved queue.
 
-- **Local.** Run `pnpm email-sync:poll` alongside the app, using the same OS user and exporting the same `DATABASE_PATH` if set. The poller reads saved settings and does not load `.env.local`. You can use a same-machine Ollama endpoint such as `http://localhost:11434/api/chat`.
-- **Cloud on Vercel.** Set `CRON_SECRET` to at least 32 characters and generate `EMAIL_SYNC_ENCRYPTION_KEY` with `openssl rand -base64 32`. Each Owner saves their own mailbox and LLM settings. The hosted poller needs a reachable LLM endpoint. The schedule comes from `vercel.json`. [Cron setup](docs/cron-setup.md) · [Configuration reference](env.example)
+- **Local.** Run `pnpm email-sync:poll` alongside the app to check for new bank alerts automatically at your configured interval. Use the same OS user and export the same `DATABASE_PATH` if set. The poller reads saved settings and does not load `.env.local`. You can use a same-machine Ollama endpoint such as `http://localhost:11434/api/chat`.
+- **Cloud on Vercel.** Vercel Cron checks for new bank alerts daily using the schedule in `vercel.json`. Set `CRON_SECRET` to at least 32 characters and generate `EMAIL_SYNC_ENCRYPTION_KEY` with `openssl rand -base64 32`. Each Owner saves their own mailbox and LLM settings. The hosted poller needs a reachable LLM endpoint. [Cron setup](docs/cron-setup.md) · [Configuration reference](env.example)
 
 ## Privacy and data ownership
 
