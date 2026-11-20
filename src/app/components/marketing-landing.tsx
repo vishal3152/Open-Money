@@ -20,22 +20,9 @@ import {
   IconShieldCheck
 } from "@tabler/icons-react";
 
-import type { MessageKey, Translator } from "@/i18n/translator";
+import type { Translator } from "@/i18n/translator";
 
 const DESKTOP_RELEASES_URL = "https://github.com/vishal3152/Open-Money/releases";
-
-const FAQS = [
-  { questionKey: "marketing.faqBankQuestion", answerKey: "marketing.faqBankAnswer" },
-  { questionKey: "marketing.faqDataQuestion", answerKey: "marketing.faqDataAnswer" },
-  { questionKey: "marketing.faqModeQuestion", answerKey: "marketing.faqModeAnswer" },
-  { questionKey: "marketing.faqDesktopCloudQuestion", answerKey: "marketing.faqDesktopCloudAnswer" },
-  { questionKey: "marketing.faqBackupQuestion", answerKey: "marketing.faqBackupAnswer" },
-  { questionKey: "marketing.faqMigrateQuestion", answerKey: "marketing.faqMigrateAnswer" },
-  { questionKey: "marketing.faqShareQuestion", answerKey: "marketing.faqShareAnswer" },
-  { questionKey: "marketing.faqAiQuestion", answerKey: "marketing.faqAiAnswer" },
-  { questionKey: "marketing.faqOptionalAiQuestion", answerKey: "marketing.faqOptionalAiAnswer" },
-  { questionKey: "marketing.faqCurrencyQuestion", answerKey: "marketing.faqCurrencyAnswer" }
-] as const satisfies ReadonlyArray<{ questionKey: MessageKey; answerKey: MessageKey }>;
 
 const FEATURES = [
   {
@@ -276,21 +263,6 @@ export function MarketingLanding({ t }: { t: Translator["t"] }) {
                 <p className="pw-marketing-privacy-boundary">{t("marketing.localLlmBoundary")}</p>
               </article>
             </div>
-          </div>
-        </section>
-
-        <section className="pw-marketing-faq" id="faq" aria-labelledby="marketing-faq-heading">
-          <div className="pw-marketing-section-heading">
-            <h2 id="marketing-faq-heading">{t("marketing.faqHeading")}</h2>
-          </div>
-
-          <div className="pw-marketing-faq-list">
-            {FAQS.map((item) => (
-              <details key={item.questionKey} className="pw-marketing-faq-item">
-                <summary>{t(item.questionKey)}</summary>
-                <p>{t(item.answerKey)}</p>
-              </details>
-            ))}
           </div>
         </section>
 

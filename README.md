@@ -8,7 +8,7 @@
 
 [![Audited with Cloudflare security-audit-skill](https://img.shields.io/badge/security_audit-Cloudflare-F38020?style=flat&logo=cloudflare&logoColor=white)](https://github.com/cloudflare/security-audit-skill)
 
-[Privacy](#privacy-and-data-ownership) · [Hosted app](https://money-watch-me.vercel.app/) · [Desktop downloads](#desktop-or-local-browser) · [Run it yourself](#run-it-your-way) · [Development setup](#develop) · [FAQ](#faq)
+[Privacy](#privacy-and-data-ownership) · [Hosted app](https://money-watch-me.vercel.app/) · [Desktop downloads](#desktop-or-local-browser) · [Run it yourself](#run-it-your-way) · [Development setup](#develop)
 
 </div>
 
@@ -174,88 +174,6 @@ For SQLite schema changes, edit `src/db/schema.ts` and regenerate `drizzle/` wit
 
 - `pnpm electron:package` builds installers in `dist/electron/`. The defaults are macOS DMG/ZIP plus Windows NSIS on macOS, or Linux AppImage plus Windows NSIS on Linux. Windows packaging needs Rosetta on Apple Silicon or Wine on Linux. macOS signing and notarization depend on the available credentials. Windows installers are unsigned. Use a clean build environment and see target overrides in the [packaging script](scripts/package-electron.sh).
 - `pnpm release` runs tests, typecheck and packaging, then publishes a version-tagged GitHub release and deploys to Vercel. It needs authenticated GitHub CLI and Vercel access for the publishing steps. See skip flags and prerequisites in the [release script](scripts/release.sh).
-
-## FAQ
-
-<details>
-<summary><b>Does this connect to my bank?</b></summary><br>
-
-No — and it will never ask for online-banking credentials. There is no Plaid, Yodlee, or screen-scraping integration in the codebase. It works from artifacts you already have: statements you download (imported with AI assistance over MCP) and the alert emails your bank already sends you (IMAP sync). That is a deliberate product choice, not a missing feature.
-</details>
-
-<details>
-<summary><b>Is my financial data sent anywhere?</b></summary><br>
-
-Core local ledger workflows store your data in SQLite without a bank or LLM connection. Email sync, your external assistant, framework telemetry and build-time downloads have separate network behavior; see [Privacy and data ownership](#privacy-and-data-ownership).
-
-In cloud mode, data is stored in the deployment's Postgres database. If you use someone else's hosted instance, that operator controls the database and server logs. Email sync sends data to its configured IMAP and LLM services; keeping LLM processing on your own machine requires a local installation and local model.
-</details>
-
-<details>
-<summary><b>Do I need Supabase to use this?</b></summary><br>
-
-No. Supabase is a **cloud-mode-only** dependency (Postgres + Auth). The desktop app and self-hosted local mode never load the Supabase SDK — cloud modules are dynamic-imported behind `isCloudMode()`. Local mode needs no accounts, no keys, and no `.env` file. Even in cloud mode, `AUTH_PROVIDER=simple` gives you multi-user logins with no Supabase Auth.
-</details>
-
-<details>
-<summary><b>Which mode should I pick?</b></summary><br>
-
-**Local/desktop** if you want your ledger on your own disk and you mostly use one machine — this is the default posture the project was built around. **Self-hosted** if you want it on your own server or NAS. **Cloud** if you want to reach the same data from a phone and a laptop without syncing a file yourself, and you are comfortable running a Supabase project (or any Postgres).
-</details>
-
-<details>
-<summary><b>Can the desktop app use cloud mode?</b></summary><br>
-
-No, by design. The Electron shell forces `DEPLOYMENT_MODE=local`, exposes no storage-mode switch, and cloud SDK modules are never loaded there. Cloud is a browser concern. The reasoning — and what reversing it would cost — is in [ADR-0007](docs/adr/0007-electron-desktop-is-local-only.md).
-</details>
-
-<details>
-<summary><b>How do I back up my data? Where does it live?</b></summary><br>
-
-**Local:** stop the app and email poller, then copy the SQLite file. Browser mode defaults to `./money-watch.db`; Electron defaults to appData/`Money-Watch/money-watch.db`, unless an environment or saved Settings path overrides it. Back up `~/.config/money-watch/settings.json` separately if you need email settings; it contains plaintext secrets. A synced folder is external storage, not a supported concurrent-write sync protocol: close all writers before syncing or copying and avoid simultaneous use on multiple machines. **Cloud:** use your Postgres provider's backups and back up `EMAIL_SYNC_ENCRYPTION_KEY` separately; losing it prevents decryption of encrypted IMAP credentials. See [Backups](#backups) and [SQLite file locations](#sqlite-file-locations).
-</details>
-
-<details>
-<summary><b>Can I move my data from local to cloud (or back)?</b></summary><br>
-
-There is no built-in migration tool. The tiers have separate SQLite and Postgres schemas, and cloud records also need an Owner identity; copying the SQLite file into cloud mode does not migrate the data.
-</details>
-
-<details>
-<summary><b>Can my spouse and I share one dataset?</b></summary><br>
-
-There is no household or shared-access feature. Cloud mode isolates one dataset per Owner and cannot grant another login access to it. Local mode has no login or person-level isolation: anyone with access to that running instance uses the same dataset.
-</details>
-
-<details>
-<summary><b>Why integer minor units instead of decimals?</b></summary><br>
-
-Amounts such as 0.1 cannot always be represented exactly as binary floating-point fractions. Open Money parses decimal input into safe-integer minor units and stores and sums those integers for ledger balances. Currency precision is defined in `src/domain/currency.ts`; realised FX rates are derived numeric ratios.
-</details>
-
-<details>
-<summary><b>Does the AI see my bank statements?</b></summary><br>
-
-With MCP import, your assistant reads the statement under its own privacy terms and sends Open Money structured rows, not the original document. Email sync sends candidate sender names and subjects and classified alert bodies to the configured LLM ([ADR-0009](docs/adr/0009-email-alert-sync-calls-llm-server-side.md)). In local mode, a same-machine Ollama endpoint keeps that LLM processing local.
-</details>
-
-<details>
-<summary><b>Do I have to use the AI features at all?</b></summary><br>
-
-No. Both are opt-in. Institutions, accounts, transactions, transfers, fixed deposits, trades and reconciliations can be managed manually. Import batches are created by the import paths; you do not need them for the manual workflows.
-</details>
-
-<details>
-<summary><b>Which currencies are supported?</b></summary><br>
-
-Accounts accept three-letter currency codes. Precision currently uses zero decimal places for JPY and KRW, three for BHD, KWD and OMR, and two for every other code; there is no complete ISO currency validation or precision table. Each Account has one currency. Cross-currency Transfers derive the realised rate from the amounts you enter; there is no market-rate feed or consolidated cross-currency valuation.
-</details>
-
-<details>
-<summary><b>Why Server Actions instead of a REST API?</b></summary><br>
-
-The server-rendered financial UI uses Server Actions for mutations and repository ports for storage access. SQLite and Postgres implementations share those ports, while cloud authentication supplies the Owner identity. MCP and email-sync routes provide separate HTTP entry points. See [ADR-0002](docs/adr/0002-server-actions-not-rest-api.md).
-</details>
 
 ## Contributing
 
