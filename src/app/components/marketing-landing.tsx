@@ -78,7 +78,6 @@ export function MarketingLanding({ t }: { t: Translator["t"] }) {
       <div className="pw-marketing">
         <section className="pw-marketing-hero" aria-labelledby="marketing-heading">
           <div className="pw-marketing-copy">
-            <p className="pw-marketing-kicker">{t("marketing.kicker")}</p>
             <h1 id="marketing-heading">{t("marketing.heading")}</h1>
             <p className="pw-marketing-lede">{t("marketing.lede")}</p>
             <div className="pw-marketing-actions">
@@ -94,10 +93,6 @@ export function MarketingLanding({ t }: { t: Translator["t"] }) {
                 <IconArrowUpRight aria-hidden="true" size={19} />
               </Link>
             </div>
-            <p className="pw-marketing-trust">
-              <IconShieldCheck aria-hidden="true" size={17} />
-              {t("marketing.trust")}
-            </p>
           </div>
 
           <div className="pw-marketing-visual">
@@ -116,16 +111,13 @@ export function MarketingLanding({ t }: { t: Translator["t"] }) {
         </section>
 
         <section className="pw-marketing-why" aria-labelledby="marketing-why-heading">
-          <p className="pw-marketing-kicker">{t("marketing.whyEyebrow")}</p>
           <h2 id="marketing-why-heading">{t("marketing.whyHeading")}</h2>
           <p>{t("marketing.whyBody")}</p>
         </section>
 
         <section className="pw-marketing-features" aria-labelledby="marketing-features-heading">
           <div className="pw-marketing-section-heading">
-            <p className="pw-marketing-kicker">{t("marketing.featuresEyebrow")}</p>
             <h2 id="marketing-features-heading">{t("marketing.featuresHeading")}</h2>
-            <p>{t("marketing.featuresLede")}</p>
           </div>
 
           <ul className="pw-marketing-feature-grid">
@@ -146,7 +138,6 @@ export function MarketingLanding({ t }: { t: Translator["t"] }) {
 
         <section className="pw-marketing-automation" aria-labelledby="marketing-automation-heading">
           <div className="pw-marketing-section-heading">
-            <p className="pw-marketing-kicker">{t("marketing.automationEyebrow")}</p>
             <h2 id="marketing-automation-heading">{t("marketing.automationHeading")}</h2>
             <p>{t("marketing.automationLede")}</p>
           </div>
@@ -217,9 +208,7 @@ export function MarketingLanding({ t }: { t: Translator["t"] }) {
 
         <section className="pw-marketing-privacy" id="privacy" aria-labelledby="marketing-privacy-heading">
           <div className="pw-marketing-section-heading">
-            <p className="pw-marketing-kicker">{t("marketing.privacyEyebrow")}</p>
             <h2 id="marketing-privacy-heading">{t("marketing.privacyHeading")}</h2>
-            <p>{t("marketing.privacyLede")}</p>
           </div>
 
           <ul className="pw-marketing-mode-grid">
@@ -237,21 +226,18 @@ export function MarketingLanding({ t }: { t: Translator["t"] }) {
                 <span className="pw-marketing-privacy-icon" aria-hidden="true">
                   <IconDatabase size={24} stroke={1.8} />
                 </span>
-                <span className="pw-marketing-privacy-tag">{t("marketing.selfHostedTag")}</span>
               </div>
               <h3>{t("marketing.selfHostedTitle")}</h3>
               <p>{t("marketing.selfHostedBody")}</p>
               <a
                 className="pw-marketing-github-link"
-                href="https://github.com/vishal3152/Open-Money"
+                href="https://github.com/vishal3152/Open-Money#self-hosted-sqlite"
               >
                 {t("marketing.selfHostedLink")}
                 <IconArrowUpRight aria-hidden="true" size={18} />
               </a>
               <ul>
-                <li><IconCheck size={18} stroke={2.2} aria-hidden="true" />{t("marketing.selfHostedNoAccount")}</li>
                 <li><IconCheck size={18} stroke={2.2} aria-hidden="true" />{t("marketing.selfHostedNoTelemetry")}</li>
-                <li><IconCheck size={18} stroke={2.2} aria-hidden="true" />{t("marketing.selfHostedNetwork")}</li>
               </ul>
             </article>
 
@@ -282,7 +268,6 @@ export function MarketingLanding({ t }: { t: Translator["t"] }) {
 
         <section className="pw-marketing-bottom-cta" aria-labelledby="marketing-bottom-heading">
           <div>
-            <p className="pw-marketing-kicker">{t("marketing.bottomEyebrow")}</p>
             <h2 id="marketing-bottom-heading">{t("marketing.bottomHeading")}</h2>
           </div>
           <div className="pw-marketing-actions">

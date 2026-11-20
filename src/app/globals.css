@@ -4000,16 +4000,6 @@ p.pw-unresolved-alert-resolve {
   max-width: 36rem;
 }
 
-.pw-marketing-kicker {
-  margin: 0 0 1rem;
-  color: var(--pw-accent-deep);
-  font-size: 0.76rem;
-  font-weight: 700;
-  letter-spacing: 0.13em;
-  line-height: 1.4;
-  text-transform: uppercase;
-}
-
 .pw-marketing h1,
 .pw-marketing h2,
 .pw-marketing h3 {
@@ -4081,22 +4071,6 @@ p.pw-unresolved-alert-resolve {
 .pw-marketing-bottom-cta .pw-marketing-actions {
   margin-top: 0;
   flex-shrink: 0;
-}
-
-.pw-marketing-trust {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.55rem;
-  margin: 1.4rem 0 0;
-  color: var(--pw-ink-muted);
-  font-size: 0.82rem;
-  line-height: 1.55;
-}
-
-.pw-marketing-trust svg {
-  flex: 0 0 auto;
-  margin-top: 0.05rem;
-  color: var(--pw-success);
 }
 
 .pw-marketing-visual {
@@ -4573,16 +4547,6 @@ p.pw-unresolved-alert-resolve {
   color: #f1c5a7;
 }
 
-.pw-marketing-privacy-tag {
-  padding: 0.38rem 0.62rem;
-  border: 1px solid rgba(255, 255, 255, 0.28);
-  border-radius: 999px;
-  color: rgba(255, 255, 255, 0.78);
-  font-size: 0.69rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-}
-
 .pw-marketing-privacy-main h3,
 .pw-marketing-privacy-card h3 {
   font-family: var(--pw-font-display);
@@ -4676,10 +4640,6 @@ p.pw-unresolved-alert-resolve {
   padding: clamp(1.5rem, 4vw, 2.75rem);
   border-radius: var(--pw-radius);
   background: var(--pw-bg-deep);
-}
-
-.pw-marketing-bottom-cta .pw-marketing-kicker {
-  margin-bottom: 0.55rem;
 }
 
 .pw-marketing-bottom-cta h2 {
