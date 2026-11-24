@@ -2,22 +2,32 @@
 status: accepted
 ---
 
-# AUTH_PROVIDER=simple: static per-email password accounts for cloud mode that need no external provider
+# `AUTH_PROVIDER=simple`: static email/password accounts for cloud mode
 
-Cloud mode's auth was Supabase-only: a new self-hoster who just wants Postgres-backed cloud mode without SQLite has to create a Supabase project, run the Supabase CLI locally (Docker), configure OAuth redirect URLs, and manage Auth env vars — real setup cost for someone who only wants a login gate in front of their own data, not full multi-user sign-up. `AUTH_PROVIDER` (new, `supabase` default | `simple`) selects a second cloud-mode auth backend that depends on nothing but one env var: `AUTH_USERS`, a static `email:password,...` list. There is no sign-up and no users table, but each configured email is still its own fully isolated Owner — a correct email+password pair sets a signed session cookie (`src/lib/simple-auth/session.ts`, HMAC over Web Crypto so it also runs on the Edge middleware runtime) that resolves to an owner id deterministically derived from that email (`deriveOwnerId()`, RFC 4122 v5), the same `getCurrentOwnerId()` contract Supabase already exposes. `middleware.ts`, `current-owner.ts`, `login/page.tsx`, and `signOut` all branch on `getAuthProvider()`; nothing under the Supabase path changed, and an unset `AUTH_PROVIDER` behaves exactly as before.
+## Context
 
-## Considered Options
+Cloud auth was Supabase-only. Operators who only want a login gate in front of their own Postgres still had to create a Supabase project, run Docker locally, and configure Auth redirects.
 
-- A single shared password with one fixed synthetic owner id, no email at all — the original shape of this ADR. Rejected on revision: a shared password gives everyone who knows it full access to everyone else's data, which doesn't hold up once more than one person uses a deployment. Per-email accounts cost one more form field and one more env var format, not real signup/credential-storage complexity (still no hashing, no reset flow, no migration) — so the "simple" trade-off holds while adding real per-user isolation.
-- `owner_id` stays a Postgres `uuid` column everywhere (every table, FK-scoped), so a raw email can't be stored as the id directly. Considered migrating every `owner_id` column to `text` — rejected: touches 10+ tables and their owner-scoped foreign keys, affects the Supabase path's schema too, for no benefit over deriving a UUID. Chose instead: `deriveOwnerId(email)` hashes the lowercased email into a deterministic UUID v5 (fixed namespace constant) — the same email always maps to the same owner id, with zero schema change and no id-to-email table to keep in sync.
-- Users table for the account list — rejected: `AUTH_USERS` is env-configured on purpose, matching this provider's whole reason to exist (no external dependency, no migration). Removing or changing a password means editing the env var and redeploying; that also revokes any session already signed for that email, since `verifySessionToken()` re-checks the signature against the *current* `AUTH_USERS` entry, not the password used at sign-in.
-- Auto-detect the provider from which env vars are present (no `NEXT_PUBLIC_SUPABASE_URL` → assume simple) — rejected: an accidentally-unset Supabase var would silently swap the entire auth backend instead of failing loudly; an explicit `AUTH_PROVIDER` makes the choice legible in the deployment's own env, and keeps the default (Supabase) stable for every existing deployment.
-- node:crypto for the HMAC — rejected after it broke: `middleware.ts` imports this module and Next bundles middleware for the Edge runtime by default, which has no `node:crypto`. Rewritten on the Web Crypto API (`crypto.subtle`), which is available in both the Node and Edge runtimes.
-- Session signing key: reuse the pattern of the (now-removed) single-password design — HMAC-keyed by the signed-in user's own password rather than a separate server secret. Rejected the alternative (a new `AUTH_SESSION_SECRET` env var) as an unnecessary extra secret: the cookie already carries the email in the open plus an HMAC over it keyed by that email's configured password, so only someone who knows a given email's password can produce a signature `verifySessionToken()` accepts for it — no shared secret needed across accounts.
+## Decision
+
+`AUTH_PROVIDER` selects the cloud auth backend: `supabase` (default) or `simple`.
+
+`simple` uses one env var, `AUTH_USERS`, a comma-separated `email:password` list. There is no sign-up UI and no users table. Each email is still a separate Owner: a matching login sets a signed session cookie (`src/lib/simple-auth/session.ts`, HMAC via Web Crypto for Edge middleware) whose Owner id is a deterministic UUID v5 of the lowercased email (`deriveOwnerId()`). That satisfies the same `getCurrentOwnerId()` contract as Supabase.
+
+`middleware.ts`, `current-owner.ts`, login, and sign-out branch on `getAuthProvider()`. Unset `AUTH_PROVIDER` keeps the previous Supabase behavior.
+
+## Alternatives considered
+
+- One shared password and one synthetic Owner — rejected; everyone with the password would share one dataset.
+- Store raw email as `owner_id` (change columns to `text`) — rejected; large schema change for no gain over UUID v5 derivation.
+- Users table for accounts — rejected; the point of this provider is env-only config with no migrations.
+- Auto-detect provider from which env vars are set — rejected; a missing Supabase var would silently switch backends.
+- `node:crypto` for HMAC — rejected; middleware runs on Edge, which has no `node:crypto`. Web Crypto works in Node and Edge.
+- Separate `AUTH_SESSION_SECRET` — rejected; the cookie HMAC is keyed by that email’s current password in `AUTH_USERS`, so editing the list revokes sessions without an extra secret.
 
 ## Consequences
 
-- Self-hosters get an env-var-only cloud auth path (`DEPLOYMENT_MODE=cloud AUTH_PROVIDER=simple AUTH_USERS=owner1@example.com:pass1,owner2@example.com:pass2`), no Supabase project or Docker required — Postgres (`SUPABASE_DB_URL`) is still required, cloud mode's data layer is unchanged.
-- Each configured email is a fully isolated Owner, same as Supabase-provider Owners: someone signed in as one email never sees another email's Institutions/Accounts/Transactions/etc. There is still no audit trail, sign-up flow, or password reset flow — editing `AUTH_USERS` and redeploying is how accounts are added, removed, or rotated. There is also no session expiry: the cookie has no embedded `exp`, so a copied cookie value stays valid until that email's `AUTH_USERS` entry is changed or removed. This is a deliberate trade for zero external dependencies, not an oversight.
-- A password may not contain `,` or `:`, since `AUTH_USERS` parses on those characters.
-- `CloudOwnerControls` now gates on `ownerId` for both providers; it shows the signed-in email when one is available (both providers have one now).
+- Cloud auth without Supabase: `DEPLOYMENT_MODE=cloud`, `AUTH_PROVIDER=simple`, `AUTH_USERS=…`, plus Postgres (`POSTGRES_URL`).
+- Each email is an isolated Owner. No audit trail, sign-up, password reset, or session expiry. Change `AUTH_USERS` and redeploy to add, remove, or rotate accounts (and invalidate cookies for that email).
+- Passwords must not contain `,` or `:`.
+- Signed-in email is available for both providers in the cloud Owner controls.

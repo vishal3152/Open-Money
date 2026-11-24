@@ -90,6 +90,7 @@ export const zh: Catalog = {
   "marketing.localLlmBody": "邮件提醒同步会将发件人和邮件主题发送给您选定的 AI 服务。识别为银行提醒的邮件还会发送正文。",
   "marketing.localLlmBoundary": "本地安装可以通过 Ollama 等工具使用在自己电脑上运行的模型。托管版需要能够连接所选的 AI 服务。",
   "marketing.bottomHeading": "开始建立自己的账本",
+  "marketing.contactLabel": "联系",
 
   // Dashboard
   "dashboard.setup.welcome": "欢迎使用 Open Money",

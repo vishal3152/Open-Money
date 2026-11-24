@@ -17,6 +17,7 @@ describe("MarketingLanding", () => {
     expect(html).toContain('href="https://github.com/vishal3152/Open-Money#self-hosted-sqlite">Read the self-hosting guide');
     expect(html).toContain('src="/marketing/dashboard-demo.png"');
     expect(html).toContain("sample data");
+    expect(html).toContain('href="mailto:vishaly5@outlook.com">vishaly5@outlook.com');
   });
 
   it("describes the core ledger features in terms of what users can do", () => {

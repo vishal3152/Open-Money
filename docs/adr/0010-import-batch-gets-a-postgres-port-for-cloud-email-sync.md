@@ -1,12 +1,22 @@
 # ImportBatch gets a Postgres port, for cloud email alert sync
 
-Supersedes `BUILD_PLAN_CLOUD.md` Decision 4 ("ImportBatch... is out of scope for this plan... the cloud tier ships without AI-assisted import for v1"), for one reason only: email alert sync (`docs/specs/email-alert-sync.md`) needs somewhere in the cloud tier to write the Transactions it produces, and it reuses `ImportBatch` (ADR-0009) rather than a parallel entity. MCP statement import itself remains out of scope for cloud — it's a local-process integration (an AI assistant talking to a loopback MCP server) with no hosted-multi-tenant shape, and porting it isn't part of this change.
+## Context
 
-`ImportBatch` gets a full Postgres port (`import_batches` table, `transactions.import_batch_id`, `PgImportBatchRepository`) — the same port every other entity already has, following the same `getScopedDb`/app-layer-`ownerId`-filtering pattern ADR-0006 established. `/imports` and `/imports/[id]` drop their `isCloudMode()` redirect guard.
+An earlier cloud plan left ImportBatch out of scope and shipped the cloud tier without AI-assisted import for v1. Email alert sync (`docs/specs/email-alert-sync.md`) needs somewhere in the cloud tier to write the Transactions it produces, and it reuses `ImportBatch` (ADR-0009) rather than a parallel entity.
 
-Email alert sync's cloud trigger is a Vercel Cron job (`vercel.json` `crons`, `CRON_SECRET`-authenticated) calling a Node-runtime API route once per configured Owner, instead of the local-tier's standalone poll process (`docs/specs/email-alert-sync.md`) — Vercel serverless has no long-running process to hold an interval. Per-Owner IMAP/OpenRouter credentials live in a new `email_sync_settings` Postgres table (owner-scoped, app-layer filtered like every other cloud table), a deliberate, explicitly owner-approved exception to this app's local-first default of storing such secrets only in the owner's own `settings.json` — see that spec's "Cloud credentials" note for the trade-off accepted (no RLS second line of defense against an `ownerId`-filter bug, per ADR-0006).
+MCP statement import remains out of scope for cloud: it is a local-process integration (an AI assistant talking to a loopback MCP server) with no hosted multi-tenant shape.
 
-## Considered Options
+## Decision
 
-- Leave ImportBatch local-only and give email alert sync a different, cloud-only entity shape. Rejected — defeats the point of reusing ImportBatch (ADR-0009's whole justification), and would mean building and maintaining two parallel review UIs.
-- Store cloud email-sync credentials as Vercel project environment variables instead of a per-Owner table. Rejected for the actual cloud tier as built: it's multi-tenant (`PRODUCT.md`), and env vars can't hold a different mailbox/API key per Owner. Would only work for a single-owner cloud deployment, which isn't what this tier is.
+`ImportBatch` gets a full Postgres port (`import_batches` table, `transactions.import_batch_id`, `PgImportBatchRepository`), using the same `getScopedDb` / app-layer `ownerId` filtering as other cloud entities (ADR-0006). `/imports` and `/imports/[id]` no longer redirect away in cloud mode.
+
+Email alert sync in cloud is a Vercel Cron job (`vercel.json` `crons`, `CRON_SECRET`-authenticated) hitting a Node-runtime API route once per configured Owner. Vercel serverless has no long-running process for the local poll daemon.
+
+Per-Owner IMAP and LLM credentials live in `email_sync_settings` (owner-scoped, app-layer filtered). That is an exception to the local default of secrets only in `settings.json` — see the spec’s “Cloud credentials” note. There is no RLS fallback if an `ownerId` filter is missing (ADR-0006).
+
+Cloud MCP import was out of scope for this ADR; ADR-0011 later added bearer-token auth for `/api/mcp` in cloud mode.
+
+## Alternatives considered
+
+- Leave ImportBatch local-only and invent a cloud-only entity for email sync — rejected: would duplicate review UI and break reuse of ImportBatch (ADR-0009).
+- Store mailbox/API keys as Vercel project env vars — rejected: cloud is multi-tenant; env vars cannot hold different credentials per Owner.

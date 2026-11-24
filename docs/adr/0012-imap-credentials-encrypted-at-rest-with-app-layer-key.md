@@ -2,63 +2,31 @@
 status: accepted
 ---
 
-# Cloud-tier IMAP credentials are encrypted at rest with an app-layer symmetric key
+# Cloud IMAP credentials are encrypted at rest
 
-`docs/specs/email-alert-sync.md`'s "Cloud credentials" note previously accepted that per-Owner IMAP
-host/port/username/password and the OpenRouter API key sit in `email_sync_settings` "protected only
-by app-layer `ownerId` filtering" — a deliberate, owner-approved trade-off given the local-first
-default is secrets-only-in-`settings.json`. The owner has now asked for the IMAP username/password
-specifically to be encrypted at rest, decrypted only server-side, on demand.
+## Context
 
-The chosen mechanism: AES-256-GCM (`src/domain/secret-cipher.ts`, `encryptSecret`/`decryptSecret`),
-keyed by a single symmetric key from the `EMAIL_SYNC_ENCRYPTION_KEY` env var
-(`src/config/email-sync-encryption-key.ts`, mirroring `resolvePostgresConnectionString()`'s
-read-from-env pattern) — never derived from anything stored in the same database. `imap_user`/
-`imap_password` stay `text` columns (no migration): `PgEmailSyncSettingsRepository.set()` encrypts
-before writing, `get()`/`listAllEmailSyncCredentials()` decrypt transparently, so every existing
-caller (`saveEmailSyncSettings`, the cron route) keeps working against the same plaintext
-`EmailSyncCredentials` shape. Encryption/decryption only ever happens in this Node-side repository —
-there is no client code path to these values, and `getEmailSyncSettingsSummary()`'s
-`hasImapPassword` boolean already never exposes the value itself.
+Email alert sync stores per-Owner IMAP settings in Postgres (`email_sync_settings`). Isolation was only app-layer `ownerId` filtering (ADR-0006). IMAP username and password should be encrypted at rest and decrypted only on the server when needed.
 
-The envelope is prefixed (`v1:` + base64(iv|authTag|ciphertext)); a stored value without that prefix
-is treated as legacy plaintext and returned as-is rather than rejected, self-healing on the row's
-next `set()`. This matters in practice, not just in theory: `listAllEmailSyncCredentials` reads every
-Owner's row unconditionally for the cron job, so a hard failure on one un-migrated row would break
-every Owner's poll in that invocation.
+## Decision
 
-`openRouterApiKey` is intentionally left as plaintext — the owner scoped this change to the IMAP
-credentials specifically.
+Encrypt `imap_user` and `imap_password` with AES-256-GCM (`src/domain/secret-cipher.ts`), keyed by `EMAIL_SYNC_ENCRYPTION_KEY` (`src/config/email-sync-encryption-key.ts`). The key comes from the environment, not from the database.
 
-## Considered Options
+Columns stay `text`. `PgEmailSyncSettingsRepository` encrypts on write and decrypts on read so callers still see plaintext `EmailSyncCredentials`. Encryption runs only in that Node repository; the settings UI never receives the secret values (only `hasImapPassword`).
 
-- Encrypt with a key derived from something in the same Postgres database (e.g. a per-Owner value) —
-  rejected: an attacker with read access to the database would then have everything needed to
-  decrypt every row, which defeats the point of encrypting at rest at all. The key must live outside
-  the data it protects.
-- A managed KMS (e.g. cloud provider key management, envelope encryption with key rotation) —
-  rejected for now as disproportionate to this app's current single-key, single-environment-variable
-  deployment shape (Vercel + one Supabase Postgres); revisit if/when a real key-rotation or
-  multi-region requirement appears.
-- Hash instead of encrypt, the way `mcp_access_tokens` stores only a SHA-256 hash
-  (`docs/adr/0011-mcp-cloud-auth-static-bearer-token.md`) — rejected: an MCP token is presented back
-  by the caller and only ever needs to be *compared*, so a one-way hash suffices. An IMAP password
-  must be recovered in full to authenticate to the mailbox, so it needs reversible encryption, not
-  hashing.
-- New dedicated columns (e.g. `imap_user_encrypted`) instead of encrypting in place — rejected:
-  no schema change is needed since the columns are already `text`, and a second column pair would
-  need its own migration and a backfill/cutover step for no behavioral benefit.
+Stored values use a `v1:` envelope (`base64(iv|authTag|ciphertext)`). Values without the prefix are treated as legacy plaintext and returned as-is, then re-encrypted on the next save. That keeps the cron job’s `listAllEmailSyncCredentials` from failing the whole run on one unmigrated row.
+
+The LLM API key remains plaintext; this change covers IMAP credentials only.
+
+## Alternatives considered
+
+- Key derived from data in the same database — an attacker with DB read access could decrypt everything.
+- Managed KMS with rotation — heavier than the current single-env-var deployment; revisit if rotation or multi-region is required.
+- Hash like MCP tokens (ADR-0011) — IMAP passwords must be recovered to log in to the mailbox; hashing is not enough.
+- Separate encrypted columns — no behavior gain over encrypting the existing `text` fields in place.
 
 ## Consequences
 
-- Cloud mode now requires `EMAIL_SYNC_ENCRYPTION_KEY` to be set (a random base64-encoded 32 bytes,
-  e.g. `openssl rand -base64 32`) before any Owner can save or the cron job can read email sync
-  settings; `resolveEmailSyncEncryptionKey()` throws a clear, actionable error otherwise rather than
-  silently storing plaintext or crashing obscurely.
-- Losing the key makes every already-stored IMAP credential unrecoverable (the Owner must re-enter
-  them) — the same recovery path as any other credential in this app going stale, but worth stating
-  since there is deliberately no fallback/recovery key.
-- `email_sync_settings.openrouter_api_key` remains plaintext, protected only by the existing
-  app-layer `ownerId` filtering (ADR-0006) — a materially different, and lesser, protection than the
-  IMAP columns now have. Extending this scheme to it is a future decision if asked for, not implied
-  by this change.
+- Cloud mode needs `EMAIL_SYNC_ENCRYPTION_KEY` (32 random bytes, base64 — `openssl rand -base64 32`) before Owners can save email sync settings or the cron can read them.
+- Losing the key makes stored IMAP credentials unrecoverable; Owners must re-enter them. There is no recovery key.
+- `llm_api_key` stays plaintext under app-layer Owner filtering only. Encrypting it would be a separate decision.
