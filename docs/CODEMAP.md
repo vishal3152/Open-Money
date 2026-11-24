@@ -31,21 +31,20 @@ Where modules live, what each is responsible for, and how they depend on each ot
 
 ## Current status
 
-Signed-out cloud visitors see the public marketing page; signed-in cloud and local users see the dashboard. The dashboard shows a welcome state with one Add Institution link whenever no Institutions exist. Once one exists, it shows the regular dashboard. Copy lives in the three locale catalogs; `.pw-onboarding` styles the welcome state.
+Signed-out cloud visitors see the marketing page. Signed-in cloud users and all local users see the dashboard. With no Institutions, the dashboard shows a welcome state and one Add Institution action; otherwise the normal dashboard. Copy lives in the three locale catalogs; `.pw-onboarding` styles the welcome state.
 
-
-- **Built:** every domain entity (Institution, Account, Transaction, BalanceSnapshot, FixedDeposit, Transfer, Reconciliation, Discrepancy, Adjustment) plus ImportBatch, ShareTradingAccount, StockTransaction, and StockImportBatch, each with a domain seam, a SQLite repository, a Postgres repository, and UI. The full route map in `docs/specs/ui.md` is implemented.
-- **Tiers:** local/self-hosted (SQLite) and desktop (Electron, SQLite-only, ADR-0007) are complete. The cloud tier (Postgres + Supabase Auth or `AUTH_PROVIDER=simple`, ADR-0006/ADR-0015) serves every screen and Server Action except dev-only `/dev/seed`.
-- **Import paths:** MCP import (local loopback; cloud via bearer token, ADR-0011) and email alert sync (local daemon; cloud Vercel Cron, ADR-0010).
+- **Built:** Institution, Account, Transaction, BalanceSnapshot, FixedDeposit, Transfer, Reconciliation, Discrepancy, Adjustment, ImportBatch, ShareTradingAccount, StockTransaction, and StockImportBatch — each with domain types, SQLite and Postgres repositories, and UI. Route map: `docs/specs/ui.md`.
+- **Tiers:** local/self-hosted SQLite and desktop Electron (SQLite-only, ADR-0007). Cloud: Postgres with Supabase Auth or `AUTH_PROVIDER=simple` (ADR-0006, ADR-0015). Cloud serves every screen and Server Action except `/dev/seed`.
+- **Import:** MCP (local loopback; cloud bearer token, ADR-0011) and email alert sync (local daemon; cloud Vercel Cron, ADR-0010).
 - **Known gaps:**
-  - Nothing starts the local email-sync daemon (`pnpm email-sync:poll`) automatically.
-  - Share trading has no cash legs, cost basis, valuation, or Reconciliation equivalent, and email alert sync does not cover broker trade confirmations.
-  - `/stock-imports/[id]` edit links have no `returnTo`, unlike `/imports/[id]`.
-  - Repository error messages composed in `src/db/errors.ts` stay English (they all pass through `src/app/domain-error-text.ts`).
+  - Local email-sync daemon (`pnpm email-sync:poll`) is not started automatically.
+  - Share trading has no cash legs, cost basis, valuation, or Reconciliation; email sync does not cover broker trade confirmations.
+  - `/stock-imports/[id]` edit links omit `returnTo` (unlike `/imports/[id]`).
+  - Repository errors from `src/db/errors.ts` stay English (`src/app/domain-error-text.ts`).
   - `AUTH_PROVIDER=simple` has no password reset.
-  - Vercel Cron runs daily (`0 8 * * *`) because Hobby plans disallow hourly.
-  - Postgres `owner_id` columns have no FK to `auth.users`.
-  - `owner_emails` rows exist only for Owners who signed in after it shipped.
+  - Vercel Cron is daily (`0 8 * * *`) on Hobby.
+  - Postgres `owner_id` has no FK to `auth.users`.
+  - `owner_emails` only exists for Owners who signed in after that table shipped.
   - LLM host DNS check does not pin `fetch` to the resolved address (accepted TOCTOU, ADR-0013).
   - `duplicate-submission-guard.ts` is single-process only (best-effort on serverless).
 
@@ -69,7 +68,7 @@ Signed-out cloud visitors see the public marketing page; signed-in cloud and loc
 
 ### Build, packaging & release (Electron shell, `scripts/`, CI)
 
-- `electron/main.cjs` — local-only shell (ADR-0007). Sets `DEPLOYMENT_MODE=local`, `PAISA_WATCH_DESKTOP=1`, `DATABASE_PATH` (appData/`Paisa-Watch` or saved setting) and `MIGRATIONS_FOLDER`, runs prepare-database, spawns Next on loopback port 4571 (sequential fallback), and opens a `BrowserWindow`. No native modules in the Electron process. Carries CJS mirrors of `resolveDatabasePath`, `resolveAppUrl`, `resolveLoopbackPort`, and merge-preserving `settings.json` writes (it cannot import the TS modules). Installs About-panel credits and Help → Contact from `electron/contact.cjs`. `electron/preload.cjs` — renderer bridge (`window.paisaWatch` file/folder pickers).
+- `electron/main.cjs` — local-only shell (ADR-0007). Sets `DEPLOYMENT_MODE=local`, `PAISA_WATCH_DESKTOP=1`, `DATABASE_PATH` (appData/`Money-Watch` or saved setting) and `MIGRATIONS_FOLDER`, runs prepare-database, spawns Next on loopback port 4571 (sequential fallback), and opens a `BrowserWindow`. No native modules in the Electron process. Carries CJS mirrors of `resolveDatabasePath`, `resolveAppUrl`, `resolveLoopbackPort`, and merge-preserving `settings.json` writes (it cannot import the TS modules). Installs About-panel credits and Help → Contact from `electron/contact.cjs`. `electron/preload.cjs` — renderer bridge (`window.paisaWatch` file/folder pickers).
 - `electron/app-paths.cjs` — `resolveAppLayout` / `resolveNodeBinary` / `resolveChildProcessEnv` for unpackaged vs packaged layouts; packaged children run as Electron-as-Node (`ELECTRON_RUN_AS_NODE=1`).
 - `electron/contact.cjs` — maintainer `CONTACT_EMAIL`, About-panel options, and application-menu template with Help → Contact (`mailto:`).
 - `scripts/prepare-database.ts` — SQLite migrations via `ensureDatabaseReady()`. `scripts/prepare-cloud-database.ts` — loads `.env`/`.env.local`, then `ensurePostgresDatabaseReady()`.
@@ -188,8 +187,8 @@ Local mode passes through without importing auth. Cloud mode verifies the sessio
 - `turnstile-site-key.ts` — `getTurnstileSiteKey()` from `NEXT_PUBLIC_TURNSTILE_SITE_KEY` (null if unset); secret lives only in hosted Supabase Auth captcha settings.
 - `is-desktop-app.ts` — `isDesktopApp()` (`PAISA_WATCH_DESKTOP=1`).
 - `contact.ts` — public maintainer `CONTACT_EMAIL` / `CONTACT_MAILTO` for marketing and docs links.
-- `resolve-database-path.ts` — explicit path → `DATABASE_PATH` → saved setting → `./paisa-watch.db`.
-- `database-settings.ts` — merge-preserving read/write of `~/.config/paisa-watch/settings.json`; `email-sync-settings.ts` layers on it.
+- `resolve-database-path.ts` — explicit path → `DATABASE_PATH` → saved setting → `./money-watch.db`.
+- `database-settings.ts` — merge-preserving read/write of `~/.config/money-watch/settings.json`; `email-sync-settings.ts` layers on it.
 - `email-sync-encryption-key.ts` — `EMAIL_SYNC_ENCRYPTION_KEY` (32 bytes, cloud only, ADR-0012). `email-sync-status.ts` — local poll status.
 - `postgres-connection.ts` — `POSTGRES_URL` or the local Supabase default. `load-project-env.ts` — `.env` then `.env.local`, no overrides.
 

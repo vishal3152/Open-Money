@@ -8,13 +8,15 @@ MCP statement import remains out of scope for cloud: it is a local-process integ
 
 ## Decision
 
-`ImportBatch` gets a full Postgres port (`import_batches` table, `transactions.import_batch_id`, `PgImportBatchRepository`) — the same port every other entity already has, following the `getScopedDb` / app-layer `ownerId` filtering pattern from ADR-0006. `/imports` and `/imports/[id]` drop their `isCloudMode()` redirect guard.
+`ImportBatch` gets a full Postgres port (`import_batches` table, `transactions.import_batch_id`, `PgImportBatchRepository`), using the same `getScopedDb` / app-layer `ownerId` filtering as other cloud entities (ADR-0006). `/imports` and `/imports/[id]` no longer redirect away in cloud mode.
 
-Email alert sync’s cloud trigger is a Vercel Cron job (`vercel.json` `crons`, `CRON_SECRET`-authenticated) calling a Node-runtime API route once per configured Owner. The local tier’s standalone poll process cannot run on Vercel serverless, which has no long-running process to hold an interval.
+Email alert sync in cloud is a Vercel Cron job (`vercel.json` `crons`, `CRON_SECRET`-authenticated) hitting a Node-runtime API route once per configured Owner. Vercel serverless has no long-running process for the local poll daemon.
 
-Per-Owner IMAP/OpenRouter credentials live in a new `email_sync_settings` Postgres table (owner-scoped, app-layer filtered like every other cloud table). That is an explicit exception to storing such secrets only in the owner’s `settings.json` — see the spec’s “Cloud credentials” note. There is no RLS second line of defense against an `ownerId`-filter bug (ADR-0006).
+Per-Owner IMAP and LLM credentials live in `email_sync_settings` (owner-scoped, app-layer filtered). That is an exception to the local default of secrets only in `settings.json` — see the spec’s “Cloud credentials” note. There is no RLS fallback if an `ownerId` filter is missing (ADR-0006).
+
+Cloud MCP import was out of scope for this ADR; ADR-0011 later added bearer-token auth for `/api/mcp` in cloud mode.
 
 ## Alternatives considered
 
-- Leave ImportBatch local-only and give email alert sync a different, cloud-only entity — rejected: defeats reusing ImportBatch (ADR-0009’s justification) and would mean two parallel review UIs.
-- Store cloud email-sync credentials as Vercel project environment variables instead of a per-Owner table — rejected: the cloud tier is multi-tenant, and env vars cannot hold a different mailbox/API key per Owner. That would only work for a single-owner cloud deployment.
+- Leave ImportBatch local-only and invent a cloud-only entity for email sync — rejected: would duplicate review UI and break reuse of ImportBatch (ADR-0009).
+- Store mailbox/API keys as Vercel project env vars — rejected: cloud is multi-tenant; env vars cannot hold different credentials per Owner.

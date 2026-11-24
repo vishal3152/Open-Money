@@ -1,10 +1,23 @@
-# Email alert sync calls an LLM server-side
+# Email alert sync calls an LLM on the server
 
-The MCP statement importer (`docs/specs/import.md`) is deliberately built "without Paisa-Watch performing any OCR/parsing itself and without Paisa-Watch paying for LLM API calls" — the owner's own AI assistant does the parsing, in conversation, because a human is present at import time to supply and confirm it. Email alert sync (`docs/specs/email-alert-sync.md`) has no such moment: bank debit/credit alert emails arrive continuously and unattended, and there is no assistant conversation to hand them to. To turn each alert into structured data at all, Paisa-Watch itself calls an LLM (via OpenRouter, using an owner-supplied API key) each time a new alert email is fetched.
+## Context
 
-This is a narrow, named exception to the MCP importer's cost/parsing boundary, not a reversal of it. The MCP flow is unchanged: `stage_import`/`commit_import` still expect the assistant to have parsed the file and still charge the assistant's own LLM usage, not Paisa-Watch's. Email alert sync is a second, independent import path that happens to also produce `ImportBatch`/`Imported` Transaction rows, and carries over the same untrusted-caller invariants as the MCP path (server-side currency-aware decimal parsing, no LLM-guessed Account, advisory-only duplicate flagging) — see `docs/specs/email-alert-sync.md`.
+MCP statement import (`docs/specs/import.md`) never parses files inside Open Money. The user’s AI assistant reads the statement and Open Money only accepts structured rows, so Open Money does not pay for that LLM usage.
 
-## Considered Options
+Email alert sync (`docs/specs/email-alert-sync.md`) has no interactive assistant. Alerts arrive on a schedule, so Open Money must structure each message itself.
 
-- Require the owner to manually forward/paste each alert into their AI assistant, same as statement import. Rejected — defeats the point of a periodic, unattended sync; the owner asked for exactly the unattended case.
-- Parse alert emails with a hand-written regex/template per bank, no LLM at all. Rejected — brittle against each bank's own wording/format changes and the number of banks the owner holds Accounts at; the LLM cost is small (short plain-text alerts, not statements) and worth the flexibility.
+## Decision
+
+For email alert sync only, Open Money calls an LLM from the server using the Owner’s configured endpoint and credentials. This is a second import path that still produces `ImportBatch` / `Imported` Transaction rows and keeps the same untrusted-input rules as MCP import (server-side decimal parsing, no LLM-chosen Account, advisory duplicate flags).
+
+MCP import is unchanged: `stage_import` / `commit_import` still expect the assistant to have parsed the file.
+
+## Alternatives considered
+
+- Forward each alert into an AI assistant by hand — rejects the unattended sync goal.
+- Hand-written per-bank parsers with no LLM — brittle across banks and wording changes; short alerts make LLM cost acceptable.
+
+## Consequences
+
+- Email sync depends on a reachable LLM endpoint (local Ollama or a hosted API).
+- MCP import remains assistant-driven and does not share this LLM call path.

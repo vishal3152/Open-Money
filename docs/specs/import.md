@@ -1,118 +1,104 @@
-# Statement Import (MCP)
+# Statement import (MCP)
 
 ## Purpose
 
-Let the owner import CSV/PDF bank statement data into a single Account via their own AI assistant (Claude Desktop, Cursor, etc.), without Paisa-Watch performing any OCR/parsing itself and without Paisa-Watch paying for LLM API calls.
+Import CSV/PDF bank or brokerage statement data into one Account through the user’s own AI assistant (Claude Desktop, Cursor, and similar). Open Money does not OCR or parse the file and does not pay for those LLM calls.
 
 ## Behavior
 
-- Paisa-Watch exposes an MCP server as an HTTP/SSE endpoint (`src/app/api/mcp/route.ts`) on the same Next.js server the Electron app already runs, on the same one URL in every mode. In local/desktop mode it's loopback-only and needs no auth — this endpoint is not reachable off the local machine, guarded by `isLoopbackHost()`. In cloud mode there is no "local machine" to trust, so it instead authenticates via a static per-Owner MCP access token (`docs/adr/0011-mcp-cloud-auth-static-bearer-token.md`): the Owner generates one from `/settings` and the MCP client sends it as an `Authorization: Bearer <token>` header; a missing or non-matching token gets a 401. (Exact transport per client is verified at implementation time — some MCP clients want a local stdio bridge rather than a direct HTTP/SSE URL; this changes the connection shim, not the tool contract below.)
-- Planned (not yet built): the same tools additionally exposed over a public, OAuth-protected HTTP endpoint for clients that can't send a static bearer header (ChatGPT's connector model, which requires OAuth 2.1 with dynamic client registration) — `docs/adr/0008-mcp-endpoint-adds-scoped-oauth-for-remote-clients.md`, proposed, independent of and unaffected by ADR-0011's cloud-mode bearer token above. Separate follow-up work, not part of the tool-handler implementation below.
-- The owner's own AI assistant reads and interprets the uploaded CSV/PDF entirely client-side. Paisa-Watch's MCP server never receives, stores, or parses raw file bytes.
-- Eight Account-side MCP tools are exposed: `list_institutions`, `create_institution`, `list_accounts`, `search_transactions`, `create_account`, `resolve_account`, `stage_import`, `commit_import` (plus ShareTradingAccount-side tools including `create_share_trading_account`, documented in `docs/specs/share-trading.md`).
-- `list_accounts` returns each Account's Institution, currency, and `accountNumber` (if set) so the assistant can disambiguate and confirm which Account a statement belongs to, including when the statement's own account number is masked. `stage_import`/`commit_import` themselves still take a plain `accountId` and do no matching of their own — account identity for those two tools is resolved by the assistant/owner in conversation, never guessed server-side.
-- `search_transactions` is read-only and searches the Owner's recorded Transactions newest-first. Optional filters cover Account, inclusive calendar-date range, case-insensitive description text, category, and credit/debit direction. Each result carries amount/currency plus Account and Institution context. One response returns at most 100 rows and includes `total`/`truncated`, so an assistant must narrow an incomplete result before making claims about the full match set.
-- `create_institution` / `create_account` exist so the assistant can set up missing ledger targets after `resolve_account` returns `unresolved` — but only when the owner has explicitly confirmed in conversation. Both require `confirmed: true`; anything else is rejected before any write (`OwnerConfirmationRequiredError`). `create_institution` reuses an existing same-named Institution (case-insensitive) instead of duplicating it. `create_account` requires an existing `institutionId` and an `accountNumber` with at least 4 digits; it reuses an existing Account at that Institution with the same last-4 digits (`created: false`) instead of minting a duplicate that would make `resolve_account` ambiguous, and rejects when a ShareTradingAccount already matches that claim.
-- `resolve_account` is the one deliberate, narrow exception: a bank statement typically shows only a masked account number (e.g. "XXXX1602"), which the assistant has no way to match exactly against `list_accounts`' full numbers itself. Given a statement's account number and institution name, it matches deterministically — never fuzzily — by the account number's last 4 digits (ignoring mask characters on either side) plus a case-insensitive exact institution-name match, the same matching `src/domain/account-number-match.ts` already does for email alert sync. Exactly one match returns that Account; **no** match returns `status: "unresolved"` so the assistant asks the owner which Account to use (via `list_accounts`) or whether to create one via `create_institution`/`create_account` after confirmation — it never creates an Account itself and never guesses by display name or product type — *unless* that same account number/institution instead matches an existing `ShareTradingAccount` (docs/specs/share-trading.md), in which case nothing is created and the result (`status: "wrong-account-type"`) tells the assistant to call `resolve_share_trading_account` instead — a broker/demat statement must never silently create a duplicate bank Account; **more than one** match returns every candidate (`status: "ambiguous"`) instead of guessing, so the assistant/owner still disambiguates by hand via `list_accounts` — matching identity is still never silently guessed, only the one masked-number case is resolved deterministically.
-- `stage_import` takes a target `accountId` and a list of proposed line items (date, signed decimal amount, description, optional category, optional `externalRef`), plus an optional closing balance and as-of date, and an optional opening balance and opening as-of date. It validates the payload, flags line items that look like duplicates of existing Transactions on that Account, and returns a preview that names the resolved Account, Institution, and currency as a structural field — never only inside free text the assistant might omit. When the Account has no existing Transactions and a non-zero `openingBalance`/`openingAsOfDate` pair is supplied, the preview's `openingBalanceLine` field carries a synthetic "Opening balance" line (kept separate from `lineItems`); when the Account already has Transactions, opening is ignored (`openingBalanceLine: null`; period open is already implied by prior activity — any mismatch surfaces later via closing-balance Reconciliation on Confirm All).
-- `commit_import` takes the same (or since-edited) payload and atomically creates one `ImportBatch` and its `Imported`-trust-status Transactions, using the same underlying validation (`src/domain/decimal-input.ts` for amounts, `assertValidCategoryForKind` for category) the web Server Actions already apply to manual entry. It **always writes** — it never rejects a line item for looking like a duplicate (`docs/adr/0014-duplicate-imports-flagged-and-gated-at-confirm-not-blocked-at-commit.md`). Instead, each line item is matched against the Account's existing Transactions and against earlier line items in the same call — by `externalRef` when both sides have one, else by `(occurredAt, amountMinor)` — and a match is persisted as `possibleDuplicateOfTransactionId` (a Suspected Duplicate — `CONTEXT.md`), pointing at the *earliest* matching Transaction so the reference stays valid even if a later duplicate in the chain is later dismissed or removed. The same opening-balance rule as `stage_import` applies: empty Account → prepend synthetic Opening balance Transaction; non-empty Account → ignore opening and still import statement lines. If a closing balance and as-of date were supplied, they are stored on the `ImportBatch` — **not** turned into a `BalanceSnapshot`/`Reconciliation` yet. `commit_import` accepts an optional `idempotencyKey`: MCP is stateless per-request (no session-level de-duplication), so an assistant that retries after a dropped/ambiguous HTTP response should pass the same key on the retry — it returns the already-created `ImportBatch` instead of committing a second, duplicate one. Omitted, behavior is unchanged (a fresh random id every call).
-- An import never creates a `Transfer`, even for a line item that looks like a movement between two of the owner's own Accounts (`docs/adr/0004-mcp-import-produces-transactions-not-transfers.md`).
-- Every Transaction created by an import belongs to exactly one `ImportBatch`.
-- The owner reviews an `ImportBatch` in-app before trusting it: while unconfirmed, each line item can be edited (amount, description, category, date) or deleted. A line item carrying a Suspected Duplicate flag additionally shows which existing Transaction it looks like a duplicate of, and an explicit "Not a duplicate — keep it" action that clears the flag without deleting the row — the only two ways a flag is resolved; editing an unrelated field never clears it.
-- **Confirm All** flips every remaining Transaction in the batch from `Imported` to `Confirmed`, and — only at this point, against the ledger as the owner actually left it — creates the stashed `BalanceSnapshot` and runs the Reconciliation, exactly as `/accounts/[id]/reconcile` already does for manual entry. A batch with no stashed closing balance confirms without creating either. It refuses (`ImportBatchHasUnresolvedDuplicatesError`) while any of its Transactions still carries an unresolved Suspected Duplicate flag — the in-app "Confirm All" button is disabled with inline text naming how many remain, rather than silently rejecting a click.
-- **Undo Import** before `Confirm All` deletes the whole unconfirmed batch (its Transactions and the `ImportBatch` row) as one unit — this is `ImportBatchRepository.delete()`, and it rejects on an already-confirmed batch.
-- **Undo Import** after `Confirm All` is a separate action, `ImportBatchRepository.undoConfirmed()`, usable only once confirmed. It reverses everything `Confirm All` did for that batch — its Transactions, and, if created, the `BalanceSnapshot` and `Reconciliation` (and an unresolved Discrepancy) — as one unit, no partial/per-transaction undo. It refuses (`ImportBatchUndoBlockedError`) once anything has been built on top of that Reconciliation: an owner-authored Adjustment resolving its Discrepancy, or a later Reconciliation for the same Account. Unwinding an Adjustment-linked correction is a different, larger problem this action does not attempt.
+- Open Money exposes an MCP HTTP endpoint at `/api/mcp` on the same Next.js server in every mode (`src/app/api/mcp/route.ts`).
+  - **Local / desktop:** loopback only (`isLoopbackHost()`), no auth.
+  - **Cloud:** static per-Owner bearer token (`docs/adr/0011-mcp-cloud-auth-static-bearer-token.md`). Generate the token in Settings; the client sends `Authorization: Bearer <token>`. Missing or wrong tokens return 401.
+- A public OAuth-protected endpoint for clients that cannot send a static header (for example ChatGPT) is proposed in `docs/adr/0008-mcp-endpoint-adds-scoped-oauth-for-remote-clients.md` and is not built yet.
+- The assistant reads and interprets the statement client-side. Open Money never receives raw file bytes.
+- Account-side tools: `list_institutions`, `create_institution`, `list_accounts`, `search_transactions`, `create_account`, `resolve_account`, `stage_import`, `commit_import`. Share-trading tools (including `create_share_trading_account`) are documented in `docs/specs/share-trading.md`.
+- `list_accounts` returns Institution, currency, and `accountNumber` (when set) so the assistant can confirm the target Account, including when the statement shows a masked number.
+- `stage_import` / `commit_import` take a plain `accountId`. They do not match accounts themselves; the assistant and user resolve identity in conversation.
+- `search_transactions` is read-only, newest first, with optional Account, inclusive date range, description, category, and credit/debit filters. Results include amount, currency, Account, and Institution. At most 100 rows per response, with `total` / `truncated`.
+- `create_institution` / `create_account` require `confirmed: true` after the user agrees in conversation; otherwise they reject with `OwnerConfirmationRequiredError`.
+  - `create_institution` reuses an existing same-named Institution (case-insensitive).
+  - `create_account` needs an existing `institutionId` and an `accountNumber` with at least four digits. It reuses a same-Institution last-4 match (`created: false`) and rejects when a ShareTradingAccount already claims that number.
+- `resolve_account` matches a statement’s masked account number and institution name deterministically via `src/domain/account-number-match.ts`: last four digits (non-digits stripped) plus case-insensitive exact institution name — never fuzzy matching.
+  - Exactly one Account → return it.
+  - None → `status: "unresolved"` (assistant asks the user, or creates after confirmation).
+  - Several → `status: "ambiguous"` with every candidate.
+  - Same claim matches a ShareTradingAccount → `status: "wrong-account-type"`; use `resolve_share_trading_account` instead.
+- `stage_import` validates proposed line items (date, signed decimal amount, description, optional category / `externalRef`), optional opening and closing balances with as-of dates, flags likely duplicates, and returns a preview that names Account, Institution, and currency as structured fields.
+  - Empty Account with non-zero opening balance/date → preview includes a separate `openingBalanceLine`.
+  - Non-empty Account → opening is ignored (`openingBalanceLine: null`).
+- `commit_import` writes one `ImportBatch` and its `Imported` Transactions using the same validation as manual entry (`src/domain/decimal-input.ts`, `assertValidCategoryForKind`). It always writes; duplicates are flagged, not rejected (`docs/adr/0014-duplicate-imports-flagged-and-gated-at-confirm-not-blocked-at-commit.md`).
+  - Duplicate match: `externalRef` when both sides have one; otherwise `(occurredAt calendar date, amountMinor)`. The flag points at the earliest match (`possibleDuplicateOfTransactionId`).
+  - Opening balance follows the same empty/non-empty rules as `stage_import`.
+  - Closing balance/date are stored on the batch; they do not create a `BalanceSnapshot` / Reconciliation yet.
+  - Optional `idempotencyKey` returns an existing batch on retry instead of writing a second one.
+- Imports never create a `Transfer`, even when a line looks like a move between the user’s own Accounts (`docs/adr/0004-mcp-import-produces-transactions-not-transfers.md`).
+- Every imported Transaction belongs to exactly one `ImportBatch`.
+- On `/imports/[id]`, the user can edit or delete unconfirmed lines. Suspected duplicates show the possible original and a “Not a duplicate — keep it” action that clears the flag only (editing other fields does not clear it).
+- **Confirm All** sets remaining Transactions to `Confirmed`. If the batch has a stashed closing balance, it then creates the `BalanceSnapshot` and runs Reconciliation. It refuses (`ImportBatchHasUnresolvedDuplicatesError`) while any Suspected Duplicate flag remains.
+- **Undo** before confirm: `ImportBatchRepository.delete()` removes the unconfirmed batch and its Transactions.
+- **Undo** after confirm: `ImportBatchRepository.undoConfirmed()` reverses the batch’s Transactions and any Snapshot / Reconciliation / unresolved Discrepancy it created. It refuses (`ImportBatchUndoBlockedError`) if an Adjustment resolved that Discrepancy or a later Reconciliation exists for the Account.
 
 ## Invariants
 
-- `resolve_account` matches by the account number's last 4 digits (any non-digit characters on either side — mask asterisks, "X"s, spaces, dashes — are stripped before comparing) and a case-insensitive exact institution-name match; fewer than 4 digits is rejected before any lookup.
-- `resolve_account` never creates an Account or Institution — zero matches returns `status: "unresolved"`; creation goes through `create_institution`/`create_account` only after owner confirmation.
-- `resolve_account` never creates anything when more than one existing Account matches; it returns every match (`status: "ambiguous"`) instead.
-- Optional `accountName`/`currencyCode` on `resolve_account` are ignored (kept for older MCP clients that still send them from when this tool auto-created on no-match).
-- `create_institution` / `create_account` require `confirmed: true`; any other value is rejected before any write.
-- `create_institution` never creates a second Institution for a name that already exists (case-insensitive) — it returns the existing one with `created: false`.
-- `create_account` requires an existing `institutionId` and an `accountNumber` with at least 4 digits; an unknown id, missing/short number, or invalid currency is rejected before any write.
-- `create_account` never creates a second Account at the same Institution with the same last-4 digits — it returns the existing one with `created: false` (or rejects if more than one already matches).
-- `commit_import` requires an existing `accountId`; an unknown id is rejected before any write.
-- `commit_import` requires at least one line item; an empty batch is rejected before any write.
-- Every Transaction created by `commit_import` carries `trustStatus: "Imported"` and a non-null `importBatchId`.
-- No import path — `stage_import` or `commit_import` — ever constructs a `Transfer`.
-- Import amounts (line items and the closing balance) are decimal strings — never pre-scaled minor-unit integers accepted from the assistant — parsed server-side against the target Account's *actual* currency (`parseDecimalToMinorUnits`), the same way every other money input in this app is parsed. This is deliberate: the assistant is an untrusted caller, and trusting an AI-supplied integer would silently misbook amounts if it assumed the wrong currency's decimal scale (e.g. a JPY Account, which has no decimal places, receiving an amount scaled as if it had two).
-- A closing balance and its as-of date must be provided together, or not at all — one without the other is rejected before any write.
-- An opening balance and its as-of date must be provided together, or not at all — one without the other is rejected before any write; the balance is parsed against the Account's currency (rejected if invalid) whether or not the Account turns out to be empty. A zero opening balance does not create a synthetic line. On a non-empty Account, a valid opening pair is ignored (statement lines still import).
-- `stage_import`'s synthetic Opening balance line is returned as its own `openingBalanceLine` field, never folded into `lineItems` — the same way `closingBalance` is kept out of `lineItems`. This is deliberate: `commit_import` takes the *same* `openingBalance`/`openingAsOfDate` pair (not a line item) to decide whether to prepend one, so an assistant that echoes `stage_import`'s `lineItems` straight back into `commit_import`, alongside that same pair, never double-books the opening amount.
-- Duplicate-flagging in `stage_import` (advisory) and duplicate-matching in `commit_import` (persisted) both key on `(accountId, occurredAt, amountMinor)` when neither side has an `externalRef` — `description` is excluded because the assistant may re-phrase the same line differently across separate parses of the same statement. `occurredAt` compares by **calendar date**, not exact timestamp: a line item's date (`YYYY-MM-DD`) is compared against each existing Transaction's date with its time-of-day stripped, so a manually-entered Transaction (a real time-of-day) is matched the same as a previously-imported one (normalized to midnight UTC on write). When a line item's `externalRef` and an existing Transaction's `externalRef` are both non-null, that match is used instead of the date+amount key — a stronger signal, so it's preferred, not merely a tiebreaker.
-- `stage_import`'s duplicate flag is advisory only, surfaced in the preview; it never blocks or alters a `commit_import` call. `commit_import` itself likewise never blocks or skips a line item for looking like a duplicate — it always writes, persisting the match as `possibleDuplicateOfTransactionId` instead (`docs/adr/0014-duplicate-imports-flagged-and-gated-at-confirm-not-blocked-at-commit.md`). The gate is downstream, at `confirmAll` (see below), not at commit.
-- When a line item matches more than one existing Transaction (e.g. the same statement imported a third time), `commit_import` flags it against the **earliest** match — a manually-entered Transaction (no `ImportBatch`) always outranks an imported one; among imported rows, the one from the earlier `ImportBatch` wins. This keeps the flag pointing at the presumed original even if a later duplicate in the chain is itself later dismissed or removed.
-- Two line items sharing an id in the same `commit_import` call roll back the whole batch (a database constraint violation), the same as any other duplicate-primary-key write in this app.
-- `ImportBatchRepository.confirmAll()` throws `ImportBatchHasUnresolvedDuplicatesError` if any Transaction in the batch still has a non-null `possibleDuplicateOfTransactionId` — checked before the `trustStatus` flip, so a blocked call makes no write.
-- `TransactionRepository.dismissSuspectedDuplicate(id)` clears `possibleDuplicateOfTransactionId` to null and changes nothing else; it works regardless of `trustStatus` (unlike `update()`/`delete()`, it never changes what the Transaction represents, only whether it's still flagged for review).
-- A Transaction can be edited via `TransactionRepository.update()` only while its `trustStatus` is `Imported`; a `Confirmed` Transaction cannot be edited through this path.
-- `ImportBatchRepository.delete()` throws if the batch's `confirmedAt` is already set — it never attempts to cascade through a Reconciliation/Discrepancy/Adjustment.
-- `ImportBatchRepository.confirmAll()` throws if the batch is already confirmed (idempotent guard, not a silent no-op).
+- `resolve_account` matches last four digits (non-digits stripped) and case-insensitive exact institution name; fewer than four digits is rejected before lookup.
+- `resolve_account` never creates Accounts or Institutions. Zero matches → `unresolved`; many matches → `ambiguous`.
+- Optional `accountName` / `currencyCode` on `resolve_account` are ignored (kept for older clients).
+- `create_institution` / `create_account` require `confirmed: true`.
+- `create_institution` returns an existing case-insensitive name match with `created: false`.
+- `create_account` requires an existing `institutionId` and ≥4-digit `accountNumber`; unknown id, bad currency, or short number is rejected.
+- `create_account` returns an existing same-Institution last-4 match with `created: false` (or rejects if more than one matches).
+- `commit_import` requires a known `accountId` and at least one line item.
+- Every Transaction from `commit_import` has `trustStatus: "Imported"` and a non-null `importBatchId`.
+- Neither `stage_import` nor `commit_import` constructs a `Transfer`.
+- Import amounts and closing/opening balances are decimal strings parsed server-side against the Account’s currency (`parseDecimalToMinorUnits`), never trusted as pre-scaled minor units from the assistant.
+- Closing balance and as-of date must both be present or both absent. The same rule applies to opening balance and opening as-of date. Zero opening balance creates no synthetic line. On a non-empty Account, a valid opening pair is ignored.
+- `stage_import` returns the synthetic opening line as `openingBalanceLine`, not inside `lineItems`, so echoing `lineItems` plus the opening pair into `commit_import` cannot double-book opening.
+- Duplicate detection keys on `(accountId, occurredAt calendar date, amountMinor)` when neither side has `externalRef`. Description is excluded. When both have `externalRef`, that match wins.
+- `stage_import` duplicate flags are advisory. `commit_import` always writes and may set `possibleDuplicateOfTransactionId`. The gate is `confirmAll`.
+- When several Transactions match, the flag points at the earliest: manual rows outrank imported ones; among imports, the earlier batch wins.
+- Duplicate primary keys in one `commit_import` call roll back the whole batch.
+- `confirmAll` throws `ImportBatchHasUnresolvedDuplicatesError` if any batch Transaction still has `possibleDuplicateOfTransactionId`.
+- `dismissSuspectedDuplicate` clears only that flag.
+- `TransactionRepository.update` allows edits only while `trustStatus` is `Imported`.
+- `ImportBatchRepository.delete` throws if `confirmedAt` is set.
+- `confirmAll` throws if the batch is already confirmed.
 
 ## Persistence requirements
 
-- New `import_batches` table: `id`, `accountId` (FK to `accounts.id`), `createdAt`, `source` (free text — e.g. filename or short description supplied by the assistant), `closingBalanceMinor` (nullable), `asOfDate` (nullable), `confirmedAt` (nullable), `balanceSnapshotId` (nullable FK to `balance_snapshots.id`, set by `confirmAll`), `reconciliationId` (nullable FK to `reconciliations.id`, set by `confirmAll`).
-- `transactions.import_batch_id`: nullable FK to `import_batches.id`.
-- `transactions.external_ref`: nullable text — the statement's own reference/confirmation number, when supplied.
-- `transactions.possible_duplicate_of_transaction_id`: nullable self-referencing FK to `transactions.id` (`on delete set null`) — the Suspected Duplicate flag (`CONTEXT.md`).
-- `ImportBatchRepository.create(batch, lineItems)` — atomic write in one `db.transaction()`, same pattern as `TransferRepository.create()`/`FixedDepositRepository.create()`. Looks up the target Account first (both to reject an unknown `accountId` and to get its currency for parsing), then computes the Suspected Duplicate match for each line item (existing Transactions plus earlier line items in the same call, earliest-first — see Invariants) before writing.
-- `ImportBatchRepository.confirmAll(id)` — refuses (`ImportBatchHasUnresolvedDuplicatesError`) if any batch Transaction still has a non-null `possible_duplicate_of_transaction_id`; otherwise flips every batch Transaction's `trustStatus` to `Confirmed`, and if `closingBalanceMinor`/`asOfDate` are set, also calls `BalanceSnapshotRepository.create()` then `ReconciliationRepository.create()` in sequence — the same two calls, in the same order, that `/accounts/[id]/reconcile`'s Server Action already makes for manual entry, rather than a parallel reimplementation of the Discrepancy rule. This is **not** one atomic transaction (matching the existing reconcile flow, which isn't either); the trust-status flip is its own atomic step.
-- `ImportBatchRepository.delete(id)` — atomically deletes the batch's linked Transactions then the batch row; throws before any write if `confirmedAt` is set.
-- `ImportBatchRepository.getById(id)` / `listAll()` for the review screens.
-- `TransactionRepository.update(id, fields: { amountMinor?, description?, category?, occurredAt? })` — new mutation capability, the first in this codebase; throws if the target Transaction's `trustStatus` is not `Imported`.
-- `TransactionRepository.dismissSuspectedDuplicate(id)` — clears `possible_duplicate_of_transaction_id` to null; no `trustStatus` guard (see Invariants).
+- `import_batches`: `id`, `accountId`, `createdAt`, `source`, nullable `closingBalanceMinor` / `asOfDate` / `confirmedAt` / `balanceSnapshotId` / `reconciliationId`.
+- `transactions.import_batch_id`: nullable FK.
+- `transactions.external_ref`: nullable statement reference.
+- `transactions.possible_duplicate_of_transaction_id`: nullable self-FK (`on delete set null`).
+- `ImportBatchRepository.create(batch, lineItems)` — one `db.transaction()`: look up Account (currency + existence), compute Suspected Duplicate matches, then write.
+- `ImportBatchRepository.confirmAll(id)` — refuse on unresolved duplicates; flip trust status; if closing balance is set, call `BalanceSnapshotRepository.create` then `ReconciliationRepository.create` (same order as manual reconcile; not one atomic transaction).
+- `ImportBatchRepository.delete(id)` — delete linked Transactions then the batch; refuse if confirmed.
+- `getById` / `listAll` for review screens.
+- `TransactionRepository.update` for Imported rows; `dismissSuspectedDuplicate` with no trust-status guard.
 
 ## HTTP and UI contract
 
-- MCP endpoint mounted on the existing Next.js server: loopback-only in local/desktop mode (same trust boundary as the rest of the app), MCP-access-token-authenticated in cloud mode (`docs/adr/0011-mcp-cloud-auth-static-bearer-token.md`). A separate public, OAuth-protected endpoint for clients that can't send a static header (ChatGPT) is proposed but not yet built (`docs/adr/0008-mcp-endpoint-adds-scoped-oauth-for-remote-clients.md`). No public HTTP route accepts an uploaded file; the owner never uploads a statement directly to Paisa-Watch's own UI.
-- `/imports` — list of ImportBatches, most recent first, showing confirmed/unconfirmed state.
-- `/imports/[id]` — per-batch review: resolved Account/Institution/currency shown prominently, editable line items while unconfirmed (reusing `<DecimalInput>` and the existing category selector), a "Confirm All" action, and an "Undo Import" action — the latter two mutually exclusive by the `confirmedAt` guard above. Each unconfirmed line item also carries a "Remove from import" link (UI review follow-up) — this deletes just that one Transaction and returns to this same batch, without discarding the rest; it introduces no new Server Action, reusing the existing generic Transaction delete route/confirmation page (`/accounts/[id]/transactions/[transactionId]/delete`) exactly the way the per-line "Edit" link already reuses the generic Transaction edit route, both via `?returnTo=/imports/[batchId]`. A flagged line item additionally shows a "Suspected duplicate" badge, a "View possible original" link to the Transaction it matched, and a "Not a duplicate — keep it" action (`dismiss-duplicate-actions.ts`) that clears the flag in place. While any line item is still flagged, "Confirm All" is disabled with inline text naming how many remain — the same single CTA, not a second confirm path. The account ledger (`transaction-ledger.tsx`) shows the same "Suspected duplicate" badge next to its trust-status badge for any flagged row, so the flag is visible outside the review page too. `/stock-imports/[id]` carries the identical treatment for `StockImportBatch`/`StockTransaction`.
-- `/settings` links to `/settings/mcp` for the full "Connect AI Assistant" guide — MCP server URL (https when the app was reached over https), copy-paste `mcp.json`, plus (cloud mode only) an MCP access token the Owner generates/regenerates/revokes (`src/app/settings/mcp/page.tsx`, `mcp-setup-section.tsx`). Both routes require sign-in in cloud mode (`src/lib/cloud-auth/session-gate.ts`), since this section renders real per-Owner data.
+- MCP endpoint: loopback in local/desktop; bearer token in cloud. No public route accepts an uploaded statement file.
+- `/imports` — batches newest first, confirmed state visible.
+- `/imports/[id]` — review: Account / Institution / currency, edit/remove lines while unconfirmed, Suspected Duplicate badge and dismiss action, Confirm All disabled while flags remain, Undo Import mutually exclusive with confirm. Edit/remove reuse generic Transaction routes with `?returnTo=/imports/[batchId]`. The ledger shows the same duplicate badge. `/stock-imports/[id]` mirrors this for stock imports.
+- `/settings/mcp` — server URL, `mcp.json`, and (cloud) generate / regenerate / revoke token. Cloud routes require sign-in.
 
 ## Acceptance criteria
 
-- `list_accounts` includes Institution, currency, and `accountNumber` for every Account.
-- `search_transactions` applies all supplied filters, returns newest matches first with Account/Institution/currency context, reports the full match count, and never returns another Owner's rows in cloud mode.
-- `create_institution` without `confirmed: true` writes nothing.
-- `create_institution` with `confirmed: true` and a new name creates exactly one Institution.
-- `create_institution` with `confirmed: true` and a case-insensitive name match returns the existing Institution and creates nothing.
-- `create_institution` with an empty or overlong name writes nothing.
-- `create_account` without `confirmed: true` writes nothing.
-- `create_account` with `confirmed: true` and valid fields (including ≥4-digit accountNumber) creates exactly one Account on the given Institution.
-- `create_account` with a last-4 match already on that Institution returns the existing Account (`created: false`) and creates nothing.
-- `create_account` with an unknown `institutionId`, empty name, invalid currency, or missing/short accountNumber writes nothing.
-- `resolve_account` with exactly one existing Account matching the last-4-digit/institution-name claim returns it and creates nothing.
-- `resolve_account` with no matching Account returns `status: "unresolved"` and creates nothing.
-- `resolve_account` with more than one matching Account creates nothing and returns every match (`status: "ambiguous"`).
-- `resolve_account` with fewer than 4 digits or an empty institution name is rejected before any lookup.
-- `stage_import` against an Account with no existing Transactions flags no duplicates.
-- `stage_import` against an Account with a matching existing Transaction (same account, date, amount) flags it as a likely duplicate without altering any data, regardless of description text.
-- `commit_import` against an Account with a matching existing Transaction still creates the new Transaction (it never rejects or skips a line item), with `possibleDuplicateOfTransactionId` set to the existing Transaction's id.
-- `commit_import` with a line item whose `externalRef` matches an existing Transaction's `externalRef` sets `possibleDuplicateOfTransactionId` to that Transaction, even when the date differs.
-- `commit_import` with a line item repeating an earlier line item in the same call flags the later occurrence against the first, leaving the first unflagged.
-- `confirmAll` on a batch with any Transaction still carrying a non-null `possibleDuplicateOfTransactionId` throws `ImportBatchHasUnresolvedDuplicatesError` and writes nothing.
-- `dismissSuspectedDuplicate` clears a Transaction's `possibleDuplicateOfTransactionId` without changing any other field, after which `confirmAll` no longer refuses on that Transaction's account.
-- `commit_import` with an unknown `accountId` writes nothing.
-- `commit_import` with an empty line-item list writes nothing.
-- `commit_import` with a line item amount that doesn't parse validly for the Account's actual currency (unsafe magnitude, or a decimal scale the currency doesn't support) is rejected before any write.
-- `commit_import` with a closing balance but no as-of date, or vice versa, is rejected before any write.
-- `commit_import` with an opening balance but no opening as-of date, or vice versa, is rejected before any write.
-- `commit_import` against an empty Account with a non-zero opening balance/date pair creates a synthetic "Opening balance" Transaction in the batch so the ledger includes the statement starting balance.
-- `commit_import` against a non-empty Account with an opening balance/date pair ignores opening and still imports the statement line items (mismatches are for Reconciliation via closing balance on Confirm All).
-- Two line items sharing an id roll back the whole `commit_import` call, writing nothing.
-- A successful `commit_import` creates exactly one unconfirmed `ImportBatch` and its `Imported` Transactions (each with `importBatchId` set); no `BalanceSnapshot` or `Reconciliation` exists yet even if a closing balance was supplied.
-- `/imports/[id]` shows every Transaction in an unconfirmed batch and lets the owner edit or delete any one.
-- Editing a Transaction whose `trustStatus` is not `Imported` is rejected.
-- `confirmAll` flips every Transaction in the batch to `Confirmed` and, only if a closing balance was stashed, creates exactly one `BalanceSnapshot` and its Reconciliation.
-- `confirmAll` on an already-confirmed batch throws without side effects.
-- `delete` on an already-confirmed batch throws without side effects.
-- `delete` on an unconfirmed batch removes its Transactions and the batch row, and nothing else.
-- No code path in `stage_import` or `commit_import` ever constructs a `Transfer`.
-- In cloud mode, an `/api/mcp` request with a missing or non-matching `Authorization` bearer token gets a 401 before any tool runs.
-- In cloud mode, an `/api/mcp` request with a valid Owner's MCP access token resolves and scopes every tool call to that Owner, the same as a browser Server Action does via the session cookie.
-- Generating a new MCP access token immediately invalidates the previous one; revoking leaves the Owner with none until they generate again.
+- `list_accounts` includes Institution, currency, and `accountNumber`.
+- `search_transactions` applies filters, returns newest first with context and total count, and never returns another Owner’s rows in cloud mode.
+- `create_institution` / `create_account` without `confirmed: true` write nothing; with confirmation they create or reuse as specified above; invalid inputs write nothing.
+- `resolve_account` returns one match, `unresolved`, or `ambiguous` without creating rows; short suffixes are rejected.
+- `stage_import` flags duplicates against existing same-account date+amount rows without writing.
+- `commit_import` still writes duplicates with `possibleDuplicateOfTransactionId` set; `externalRef` matches win over date; later lines in the same call flag against earlier ones.
+- `confirmAll` refuses while flags remain; `dismissSuspectedDuplicate` clears a flag so confirm can proceed.
+- Invalid `accountId`, empty lines, bad decimal scale, or unpaired opening/closing fields write nothing.
+- Empty Account + non-zero opening creates a synthetic Opening balance Transaction; non-empty Account ignores opening and still imports lines.
+- Duplicate ids in one call write nothing.
+- Successful `commit_import` creates one unconfirmed batch and its Imported Transactions; no Snapshot/Reconciliation until Confirm All.
+- Unconfirmed review allows edit/delete; Confirmed rows reject this edit path.
+- Confirm All flips trust status and, when a closing balance was stashed, creates Snapshot + Reconciliation once; repeat confirm/delete on confirmed batches throw.
+- No import path constructs a Transfer.
+- Cloud MCP without a valid bearer token returns 401; a valid token scopes tools to that Owner. Regenerating invalidates the previous token; revoke leaves none until generate again.
 
 ## Decision record
 

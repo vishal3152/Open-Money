@@ -1,46 +1,35 @@
-# Connecting an AI assistant (MCP setup)
+# Connect an AI assistant (MCP)
 
-How to point Claude Desktop, Claude Code, Cursor, or another MCP-compatible client at
-Open Money's own MCP server so it can import a bank statement and search recorded Transactions.
-See `docs/specs/import.md` for the import workflow; this page is only the client-side connection steps.
+Point Claude Desktop, Claude Code, Cursor, or another MCP client at Open Money so it can import statements and search transactions. For the import workflow itself, see `docs/specs/import.md`.
 
-The steps differ by deployment mode: local/desktop needs no credential at all
-(loopback is the trust boundary); cloud-hosted needs an MCP access token
-(`docs/adr/0011-mcp-cloud-auth-static-bearer-token.md`).
+| Mode | Auth |
+| --- | --- |
+| Local, desktop, or self-hosted | None — loopback only |
+| Cloud | MCP access token (see `docs/adr/0011-mcp-cloud-auth-static-bearer-token.md`) |
 
-## 1. Find your server URL
+## 1. Get the server URL
 
-Open **Settings → Connect AI Assistant → How to connect MCP** (`/settings/mcp`) in the running
-app. It shows the exact address for this instance (including `https://` when the app itself was
-opened over HTTPS), e.g. `http://localhost:3000/api/mcp` locally or `https://your-domain/api/mcp`
-in cloud mode, plus a ready-to-paste `mcp.json` block.
+Open **Settings → Connect AI Assistant** (`/settings/mcp`). The page shows this instance’s MCP URL (for example `http://localhost:3000/api/mcp` or `https://your-domain/api/mcp`) and a ready-to-paste `mcp.json` block.
 
-**Local/desktop/self-hosted only:** this endpoint accepts connections from the same
-machine only — no login or API key is needed. Skip to step 2.
+**Local / desktop / self-hosted:** the endpoint accepts same-machine connections only. No token. Continue to step 2.
 
-**Cloud-hosted only:** this same page also has an "MCP Access Token" control. Click
-**Generate token** and copy the plaintext shown — it is shown exactly once and only its
-hash is ever stored, so if you lose it you'll need to generate a new one (which
-invalidates the old one immediately). You'll use it in step 2 below.
+**Cloud:** use **Generate token**, then copy the value shown. It appears once; only a hash is stored. Generating again invalidates the previous token.
 
-## 2. Add it to your client
+## 2. Configure the client
 
-**Claude Desktop** — Settings → Connectors → Add custom connector → paste the URL from
-step 1. Local/desktop: Desktop will attempt an OAuth handshake; since this server needs
-no auth there, that step should just complete (nothing to fill in). Cloud-hosted: use the
-Advanced settings to add a custom header, `Authorization: Bearer <your token>`, using the
-token from step 1 — if the connector UI doesn't offer a custom-header field, use Claude
-Code or Cursor's JSON config below instead. See [Anthropic's Custom Connectors
-docs](https://support.claude.com/en/articles/10949351) if the flow prompts for anything
-unexpected.
+**Claude Desktop** — Settings → Connectors → Add custom connector → paste the URL from step 1.
 
-**Claude Code / Cursor** — add an entry to your MCP config (Cursor: Settings → Features →
-MCP → Add New MCP Server, or edit `mcp.json` directly; Claude Code: `.mcp.json`):
+- Local: Desktop may start an OAuth flow; leave it empty and continue.
+- Cloud: add header `Authorization: Bearer <token>`. If the UI has no custom-header field, use Claude Code or Cursor’s JSON config instead.
+
+See [Anthropic’s custom connectors docs](https://support.claude.com/en/articles/10949351) if the UI asks for unexpected fields.
+
+**Claude Code / Cursor** — add an MCP server entry (Cursor: Settings → Features → MCP, or edit `mcp.json`; Claude Code: `.mcp.json`):
 
 ```json
 {
   "mcpServers": {
-    "paisa-watch": {
+    "open-money": {
       "type": "http",
       "url": "http://localhost:3000/api/mcp",
       "headers": {
@@ -51,44 +40,21 @@ MCP → Add New MCP Server, or edit `mcp.json` directly; Claude Code: `.mcp.json
 }
 ```
 
-Use the URL from step 1, not the placeholder above. **Local/desktop/self-hosted:** omit
-the `headers` block entirely — it isn't needed and there's no token to put there.
-**Cloud-hosted:** keep `headers`, replacing `YOUR_TOKEN_HERE` with the token from step 1.
-Cursor's config accepts a bare `url` field without `type`; Claude Code needs
-`"type": "http"` (or `"streamable-http"`, an alias for the same transport) alongside it.
+Use the URL from step 1. Local mode: omit `headers`. Cloud mode: replace `YOUR_TOKEN_HERE` with your token. Cursor accepts a bare `url` without `type`; Claude Code needs `"type": "http"` (or `"streamable-http"`).
 
-**Another MCP client** — connect it as a Streamable HTTP server at the URL from step 1,
-with the `Authorization: Bearer <token>` header in cloud mode. If the client only
-supports local stdio servers, it isn't compatible with this endpoint today (see "Not
-covered" below).
+**Other clients** — connect as Streamable HTTP at the URL from step 1. In cloud mode, send `Authorization: Bearer <token>`. Stdio-only clients are not supported.
 
-## 3. Verify it worked
+## 3. Check the connection
 
-Ask the assistant something like "list my Open Money accounts". It should call the
-`list_accounts` tool and read back your Institutions/Accounts. Then try "show my latest
-five debit transactions"; it should call the read-only `search_transactions` tool. If it
-can't see the server at all, see Troubleshooting below.
+Ask something like “list my Open Money accounts” or “show my latest five debit transactions.” The assistant should call `list_accounts` or `search_transactions`.
 
 ## Troubleshooting
 
-- **403 Forbidden (local/desktop/self-hosted)** — the request's `Host` header wasn't
-  recognized as loopback (`src/app/api/mcp/loopback-guard.ts`). This can happen behind a
-  reverse proxy that rewrites `Host`; the MCP endpoint isn't meant to be exposed that way
-  in this mode (loopback is the trust boundary).
-- **401 Unauthorized (cloud-hosted)** — the `Authorization` header was missing, malformed,
-  or the token doesn't match a generated one. Re-check the header is exactly
-  `Authorization: Bearer <token>` (no extra quoting), and that the token wasn't since
-  regenerated or revoked from Settings — only the most recently generated token works.
-- **Client can't reach the URL at all** — confirm the app is actually running and that
-  the address in the URL matches what Settings currently shows (it's read live from the
-  request, not hardcoded, so it changes if you change how the app is launched or deployed).
-- **Assistant sees the tools but the import looks wrong** — the assistant reads and
-  parses your statement itself; Open Money never sees the file. Re-check what you
-  pasted/uploaded to the assistant, not this server.
+- **403 (local)** — `Host` was not treated as loopback. Reverse proxies that rewrite `Host` are not supported for this endpoint.
+- **401 (cloud)** — missing or wrong `Authorization: Bearer <token>`, or the token was regenerated or revoked.
+- **Cannot reach the URL** — confirm the app is running and the URL matches what Settings shows for this launch.
+- **Import looks wrong** — the assistant parses the statement; Open Money never sees the file. Check what was uploaded to the assistant.
 
 ## Not covered
 
-A remote client that can't send a static header (e.g. a hosted ChatGPT connector, which
-requires OAuth 2.1 with dynamic client registration) needs a separate public,
-OAuth-protected endpoint — proposed but not built yet:
-`docs/adr/0008-mcp-endpoint-adds-scoped-oauth-for-remote-clients.md`.
+Clients that cannot send a static bearer header (for example ChatGPT’s connector, which expects OAuth 2.1) need a separate endpoint. That design is proposed in `docs/adr/0008-mcp-endpoint-adds-scoped-oauth-for-remote-clients.md` and is not built yet.

@@ -22,4 +22,5 @@ When a re-import matches more than one existing record, flag against the earlies
 
 ## Consequences
 
-- `docs/specs/import.md`’s invariant — “Duplicate-flagging is advisory only … it never blocks or silently skips a `commit_import` call” — remains true for `commit_import` itself, but is no longer the whole story: `confirmAll` can now block. That spec (and its stock-import counterpart) needs updating alongside the implementation to describe the Suspected Duplicate flag, the earliest-match tie-break, and the new `confirmAll` precondition.
+- `commit_import` still never rejects or skips a line for looking like a duplicate; `confirmAll` is where unresolved Suspected Duplicate flags block.
+- Specs for import and stock import describe the flag, earliest-match tie-break, and confirm precondition (`docs/specs/import.md`, `docs/specs/share-trading.md`).
