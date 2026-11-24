@@ -1,3 +1,17 @@
 # UI mutates through Server Actions, not a REST API layer
 
-Paisa-Watch is single-user and local-first, and no consumer other than its own Next.js UI is planned (PRODUCT.md explicitly defers hosted/multi-tenant work). The obvious alternative for a money-tracking app — JSON routes under `src/app/api/*`, called from client components — was rejected in favor of Next.js Server Actions called directly from forms and Server Components. A REST layer would mean designing and maintaining request/response contracts for nine entities with no second consumer to justify them, which is exactly the speculative flexibility AGENTS.md §2 rules out. If a real second consumer (a hosted API, a mobile client) materializes later, that's the point at which an API layer becomes non-speculative — not before.
+## Context
+
+Open Money is single-user and local-first. No consumer other than its own Next.js UI is planned. Hosted and multi-tenant work is deferred.
+
+## Decision
+
+Forms and Server Components call Next.js Server Actions directly. There is no JSON REST layer under `src/app/api/*` for the nine domain entities.
+
+## Alternatives considered
+
+- JSON routes under `src/app/api/*` called from client components — rejected: that means designing and maintaining request/response contracts for nine entities with no second consumer to justify them. Speculative flexibility of that kind is out of scope.
+
+## Consequences
+
+- If a real second consumer appears later (hosted API, mobile client), an API layer becomes non-speculative then — not before.
